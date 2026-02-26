@@ -248,11 +248,12 @@ var allowedRequestTypes = map[string]bool{
 	"GetSceneList": true, "SetCurrentProgramScene": true, "GetCurrentProgramScene": true,
 	"CreateScene": true, "RemoveScene": true, "SetSceneName": true,
 	// Scene items (sources within scenes)
-	"GetSceneItemList": true, "GetSceneItemEnabled": true, "SetSceneItemEnabled": true,
-	"GetSceneItemTransform": true, "SetSceneItemTransform": true, "RemoveSceneItem": true,
+	"GetSceneItemList": true, "GetGroupSceneItemList": true, "GetSceneItemEnabled": true, "SetSceneItemEnabled": true,
+	"GetSceneItemTransform": true, "SetSceneItemTransform": true, "SetSceneItemIndex": true, "RemoveSceneItem": true,
 	// Sources / Inputs
 	"GetSourcesList": true, "GetSourceActive": true, "SetSourceFilterEnabled": true,
-	"CreateInput": true, "GetInputSettings": true, "SetInputSettings": true, "SetInputName": true,
+	"CreateInput": true, "CreateSceneItem": true, "GetInputList": true, "RemoveInput": true,
+	"GetInputSettings": true, "SetInputSettings": true, "SetInputName": true,
 	"GetInputMute": true, "SetInputMute": true, "ToggleInputMute": true, "GetInputVolume": true, "SetInputVolume": true,
 	// Stream
 	"GetStreamStatus": true, "StartStream": true, "StopStream": true, "ToggleStream": true,
@@ -266,8 +267,13 @@ var allowedRequestTypes = map[string]bool{
 	"GetStudioModeEnabled": true, "SetStudioModeEnabled": true,
 	// Media
 	"TriggerMediaInputAction": true,
+	"GetMediaInputStatus":     true,
+	// Agent-local (handled by agent, never forwarded to OBS)
+	"AgentConfigureMonitor": true,
 	// General
 	"GetVideoSettings": true, "GetStats": true, "GetVersion": true,
+	// Screenshots
+	"GetSourceScreenshot": true,
 }
 
 // ProtocolResult is returned by ValidateOBSProtocol.

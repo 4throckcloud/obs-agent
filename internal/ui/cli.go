@@ -60,3 +60,24 @@ func (c *CliUI) Confirm(title, message string) bool {
 	line = strings.ToLower(strings.TrimSpace(line))
 	return line == "" || line == "y" || line == "yes"
 }
+
+func (c *CliUI) Form(title string, fields []FormField) (map[string]string, bool) {
+	fmt.Printf("--- %s ---\n", title)
+	result := make(map[string]string, len(fields))
+	for _, f := range fields {
+		if f.Password {
+			val, ok := c.Password(title, f.Label)
+			if !ok {
+				return nil, false
+			}
+			result[f.Key] = val
+		} else {
+			val, ok := c.Entry(title, f.Label, f.Default)
+			if !ok {
+				return nil, false
+			}
+			result[f.Key] = val
+		}
+	}
+	return result, true
+}

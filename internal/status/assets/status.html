@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OBS Agent — Starting...</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAFHUExURQAAAOlPLf///+lPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLf///////////////////////////////+lPLelPLf///////////////////////////////////////////////////////////////////////////////////////////////////+lPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLf///5gC6b0AAABrdFJOUwAAAAg0QjZi7/fxaJadnpyjAi03NVTc31Zp7PL4bAGpA6SrzIuG4i4EjQsMqMgOYK4NBo/Fw+rHATZdUA4yUhFf67sPxvdKC736VBPS/VPJXweOzy4FhsEQDAYC2R56/VpVdP5r7W9k8GoJ9xWjxAAAAAFiS0dEAmYLfGQAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfqAhgUIBQAF0UnAAABWklEQVRIx+3UR1PCQBgG4HxZK7YAUZEgWImiqDQNiA0s2EVs2LBh2/z/s2Ey47DJpuxJD7zX3Wdm68txrfzHAGprb0oHAof50NnV3RRPD4AD6MVE+lhBvyMYIIHgtQaAfH5xcIgEwwHR76PvHGAkKEkhbEhIkoKj1HVBWMAWiYxRgXfcCkxYg8mpaUMEjx2IysbVwswsFUAYxebmcXzBPLKI8VIihsLkCCRT6cwyXkkAr2Rzq3me45W13PoGz8EmxluZdCppAKjQ2F0DFLfVnV0N7JXU/QMdaCkgS3B4pB6faCB/qqpnbkD5vFK60MDlVeU66wbw5ZuqogH+tli9cwFMp2QL4u6Bfqz3D6aLg0f6seoXV4s8Bcg8v0SpF/f7+F5rhjg8PubXygSYPxC81elftP5Orw5AMr0EZJv6Y6oZHTAXGXNVfnwSZfwFTvWNRKLuvx3mt/JH+QGHtshr6w0eFgAAAABJRU5ErkJggg==">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#e94f2d;
+  --primary-hover:#ff6b4a;
+  --primary-dim:rgba(233,79,45,.15);
+  --primary-glow:rgba(233,79,45,.25);
+  --primary-border:rgba(233,79,45,.3);
+  --bg-darker:#121212;
+  --bg-dark:#1a1a1a;
+  --bg-card:rgba(35,35,33,.7);
+  --bg-input:rgba(0,0,0,.4);
+  --border:#3a3a38;
+  --text:#ffffff;
+  --text-muted:rgba(255,255,255,.6);
+  --text-dim:rgba(255,255,255,.4);
+  --success:#00c853;
+  --error:#dc3545;
+  --warning:#ffc107;
+  --font-brand:'Press Start 2P',cursive;
+  --font-body:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+  --radius:8px;
+  --radius-sm:6px;
+}
+html{height:100%}
+body{
+  min-height:100%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-body);font-size:14px;
+  background:linear-gradient(135deg,var(--bg-darker) 0%,var(--bg-dark) 100%);
+  color:var(--text);
+}
+/* Scanlines */
+body::before{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.1),rgba(0,0,0,.1) 1px,transparent 1px,transparent 2px);
+  pointer-events:none;z-index:9999;
+}
+
+/* Dashboard Container */
+.dashboard{
+  width:100%;max-width:520px;margin:24px;
+  background:var(--bg-card);
+  border:1px solid var(--primary-border);
+  border-radius:12px;
+  box-shadow:0 0 60px rgba(233,79,45,.06),0 4px 32px rgba(0,0,0,.5);
+  overflow:hidden;animation:fadeUp .5s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* Header */
+.dash-header{padding:24px 28px 0;text-align:center}
+.brand{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:20px}
+.brand-icon{width:36px;height:36px;flex-shrink:0}
+.brand-icon img{width:100%;height:100%;object-fit:contain}
+.brand-text{font-family:var(--font-brand);font-size:13px;color:var(--primary);line-height:1.8}
+.brand-sub{font-family:var(--font-brand);font-size:7px;color:var(--text-dim);letter-spacing:1px;margin-top:-2px}
+
+/* Status hero */
+.status-hero{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:16px 20px;margin:0 28px 20px;
+  background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);
+  transition:border-color .5s,background .5s;
+}
+.status-hero.connected{border-color:rgba(0,200,83,.3);background:rgba(0,200,83,.05)}
+.status-hero.partial{border-color:rgba(255,193,7,.3);background:rgba(255,193,7,.05)}
+.status-hero.disconnected{border-color:rgba(220,53,69,.3);background:rgba(220,53,69,.05)}
+
+.status-dot{
+  width:14px;height:14px;border-radius:50%;flex-shrink:0;
+  transition:background .5s,box-shadow .5s;
+}
+.status-dot.green{background:var(--success);box-shadow:0 0 10px rgba(0,200,83,.5)}
+.status-dot.yellow{background:var(--warning);box-shadow:0 0 10px rgba(255,193,7,.5)}
+.status-dot.red{background:var(--error);box-shadow:0 0 10px rgba(220,53,69,.5)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.status-dot.pulse{animation:pulse 1.5s ease-in-out infinite}
+
+.status-label{font-size:15px;font-weight:600}
+
+/* Connection cards */
+.cards{padding:0 28px 20px;display:flex;flex-direction:column;gap:10px}
+.card{
+  padding:14px 16px;
+  background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);
+  display:flex;align-items:center;gap:12px;
+  transition:border-color .3s;
+}
+.card.ok{border-color:rgba(0,200,83,.25)}
+.card.err{border-color:rgba(220,53,69,.25)}
+
+.card-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.card-dot.green{background:var(--success)}
+.card-dot.red{background:var(--error)}
+.card-dot.yellow{background:var(--warning)}
+
+.card-info{flex:1;min-width:0}
+.card-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)}
+.card-value{font-size:13px;font-family:var(--font-mono);color:var(--text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Error strip */
+.error-strip{
+  margin:0 28px 16px;padding:10px 14px;
+  background:rgba(220,53,69,.1);border:1px solid rgba(220,53,69,.2);
+  border-radius:var(--radius-sm);font-size:12px;color:var(--error);
+  font-family:var(--font-mono);word-break:break-word;
+  display:none;
+}
+.error-strip.show{display:block}
+
+/* Stats row */
+.stats{
+  padding:0 28px 20px;display:flex;gap:12px;
+}
+.stat{
+  flex:1;padding:10px 12px;
+  background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);
+  text-align:center;
+}
+.stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)}
+.stat-value{font-size:14px;font-weight:600;color:var(--text);margin-top:4px;font-family:var(--font-mono)}
+
+/* Actions */
+.actions{padding:0 28px 24px;display:flex;gap:10px}
+.btn{
+  flex:1;padding:10px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all .2s;font-family:var(--font-body);text-align:center;
+}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{
+  background:transparent;color:var(--text-muted);border:1px solid var(--border);
+}
+.btn-secondary:hover:not(:disabled){color:var(--text);border-color:var(--text-dim)}
+.btn-danger{
+  background:transparent;color:var(--error);border:1px solid rgba(220,53,69,.3);
+}
+.btn-danger:hover:not(:disabled){background:rgba(220,53,69,.1);border-color:rgba(220,53,69,.5)}
+
+/* Confirm overlay */
+.confirm-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+  z-index:100;align-items:center;justify-content:center;
+}
+.confirm-overlay.show{display:flex}
+.confirm-box{
+  background:var(--bg-card);border:1px solid var(--primary-border);
+  border-radius:12px;padding:28px;max-width:360px;width:90%;text-align:center;
+  box-shadow:0 8px 40px rgba(0,0,0,.6);
+}
+.confirm-box h3{font-family:var(--font-brand);font-size:10px;color:var(--primary);margin-bottom:12px}
+.confirm-box p{color:var(--text-muted);font-size:14px;margin-bottom:20px;line-height:1.5}
+.confirm-actions{display:flex;gap:10px;justify-content:center}
+.confirm-actions .btn{flex:0;min-width:100px}
+
+/* Version footer */
+.version{text-align:center;padding:0 0 16px;font-family:var(--font-mono);font-size:10px;color:var(--text-dim)}
+
+/* Responsive */
+@media(max-width:560px){
+  .dashboard{margin:12px;border-radius:8px}
+  .dash-header,.cards,.stats,.actions{padding-left:16px;padding-right:16px}
+  .status-hero{margin-left:16px;margin-right:16px}
+  .error-strip{margin-left:16px;margin-right:16px}
+  .brand-text{font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+  <div class="dash-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAFHUExURQAAAOlPLf///+lPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLf///////////////////////////////+lPLelPLf///////////////////////////////////////////////////////////////////////////////////////////////////+lPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLf///5gC6b0AAABrdFJOUwAAAAg0QjZi7/fxaJadnpyjAi03NVTc31Zp7PL4bAGpA6SrzIuG4i4EjQsMqMgOYK4NBo/Fw+rHATZdUA4yUhFf67sPxvdKC736VBPS/VPJXweOzy4FhsEQDAYC2R56/VpVdP5r7W9k8GoJ9xWjxAAAAAFiS0dEAmYLfGQAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfqAhgUIBQAF0UnAAABWklEQVRIx+3UR1PCQBgG4HxZK7YAUZEgWImiqDQNiA0s2EVs2LBh2/z/s2Ey47DJpuxJD7zX3Wdm68txrfzHAGprb0oHAof50NnV3RRPD4AD6MVE+lhBvyMYIIHgtQaAfH5xcIgEwwHR76PvHGAkKEkhbEhIkoKj1HVBWMAWiYxRgXfcCkxYg8mpaUMEjx2IysbVwswsFUAYxebmcXzBPLKI8VIihsLkCCRT6cwyXkkAr2Rzq3me45W13PoGz8EmxluZdCppAKjQ2F0DFLfVnV0N7JXU/QMdaCkgS3B4pB6faCB/qqpnbkD5vFK60MDlVeU66wbw5ZuqogH+tli9cwFMp2QL4u6Bfqz3D6aLg0f6seoXV4s8Bcg8v0SpF/f7+F5rhjg8PubXygSYPxC81elftP5Orw5AMr0EZJv6Y6oZHTAXGXNVfnwSZfwFTvWNRKLuvx3mt/JH+QGHtshr6w0eFgAAAABJRU5ErkJggg==" alt="4thRock">
+      </div>
+      <div>
+        <div class="brand-text">4thRock</div>
+        <div class="brand-sub">OBS Agent</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-hero disconnected" id="statusHero">
+    <div class="status-dot red pulse" id="statusDot"></div>
+    <span class="status-label" id="statusLabel">Connecting...</span>
+  </div>
+
+  <div class="cards">
+    <div class="card" id="cardObs">
+      <div class="card-dot red" id="obsDot"></div>
+      <div class="card-info">
+        <div class="card-title">OBS Studio</div>
+        <div class="card-value" id="obsValue">Disconnected</div>
+      </div>
+    </div>
+    <div class="card" id="cardRelay">
+      <div class="card-dot red" id="relayDot"></div>
+      <div class="card-info">
+        <div class="card-title">Relay Server</div>
+        <div class="card-value" id="relayValue">Disconnected</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="error-strip" id="errorStrip"></div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Uptime</div>
+      <div class="stat-value" id="uptimeValue">--:--</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">PID</div>
+      <div class="stat-value" id="pidValue">--</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Version</div>
+      <div class="stat-value" id="versionValue">--</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-secondary" id="btnReconfigure">Reconfigure</button>
+    <button class="btn btn-danger" id="btnQuit">Quit Agent</button>
+  </div>
+
+  <div class="version" id="footerVersion">4thRock OBS Agent</div>
+</div>
+
+<!-- Quit confirm -->
+<div class="confirm-overlay" id="quitOverlay">
+  <div class="confirm-box">
+    <h3>QUIT AGENT</h3>
+    <p>Are you sure? The agent will stop and OBS will disconnect from the cloud.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" id="quitCancel">Cancel</button>
+      <button class="btn btn-danger" id="quitConfirm">Quit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  let pollTimer = null;
+  let lastStatus = null;
+
+  // --- Remote/local detection ---
+  const _params = new URLSearchParams(location.search);
+  const _port = _params.get('port');
+  const API_BASE = _port ? 'http://127.0.0.1:' + _port : '';
+
+  // --- Poll status ---
+  async function poll() {
+    try {
+      const res = await fetch(API_BASE + '/api/status');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      update(data);
+    } catch (e) {
+      // Agent probably stopped
+      updateOffline();
+    }
+  }
+
+  function update(d) {
+    lastStatus = d;
+
+    // Overall status
+    const bothOk = d.obs_connected && d.relay_connected;
+    const anyOk = d.obs_connected || d.relay_connected;
+    const heroEl = $('statusHero');
+    const dotEl = $('statusDot');
+
+    if (bothOk) {
+      heroEl.className = 'status-hero connected';
+      dotEl.className = 'status-dot green';
+      $('statusLabel').textContent = 'Connected';
+      document.title = 'OBS Agent \u2014 Connected';
+    } else if (anyOk) {
+      heroEl.className = 'status-hero partial';
+      dotEl.className = 'status-dot yellow pulse';
+      $('statusLabel').textContent = 'Partially Connected';
+      document.title = 'OBS Agent \u2014 Reconnecting...';
+    } else {
+      heroEl.className = 'status-hero disconnected';
+      dotEl.className = 'status-dot red pulse';
+      $('statusLabel').textContent = d.status === 'starting' ? 'Starting...' : 'Disconnected';
+      document.title = 'OBS Agent \u2014 ' + (d.status === 'starting' ? 'Starting...' : 'Disconnected');
+    }
+
+    // OBS card
+    $('obsDot').className = 'card-dot ' + (d.obs_connected ? 'green' : 'red');
+    $('cardObs').className = 'card ' + (d.obs_connected ? 'ok' : 'err');
+    $('obsValue').textContent = d.obs_connected
+      ? d.obs_host + ':' + d.obs_port
+      : 'Disconnected \u2014 ' + d.obs_host + ':' + d.obs_port;
+
+    // Relay card
+    $('relayDot').className = 'card-dot ' + (d.relay_connected ? 'green' : 'red');
+    $('cardRelay').className = 'card ' + (d.relay_connected ? 'ok' : 'err');
+    $('relayValue').textContent = d.relay_connected
+      ? d.relay_url.replace(/^wss?:\/\//, '')
+      : 'Disconnected \u2014 ' + d.relay_url.replace(/^wss?:\/\//, '');
+
+    // Error
+    if (d.last_error) {
+      $('errorStrip').textContent = d.last_error;
+      $('errorStrip').classList.add('show');
+    } else {
+      $('errorStrip').classList.remove('show');
+    }
+
+    // Stats
+    $('uptimeValue').textContent = formatUptime(d.uptime_seconds);
+    $('pidValue').textContent = d.pid;
+    $('versionValue').textContent = d.version || '--';
+    $('footerVersion').textContent = '4thRock OBS Agent' + (d.version ? ' v' + d.version : '');
+  }
+
+  function updateOffline() {
+    $('statusHero').className = 'status-hero disconnected';
+    $('statusDot').className = 'status-dot red';
+    $('statusLabel').textContent = 'Agent Stopped';
+    document.title = 'OBS Agent \u2014 Stopped';
+    $('obsDot').className = 'card-dot red';
+    $('relayDot').className = 'card-dot red';
+    $('cardObs').className = 'card err';
+    $('cardRelay').className = 'card err';
+    $('btnReconfigure').disabled = true;
+    $('btnQuit').disabled = true;
+  }
+
+  function formatUptime(secs) {
+    if (!secs && secs !== 0) return '--:--';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return h + 'h ' + pad(m) + 'm';
+    return m + 'm ' + pad(s) + 's';
+  }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  // --- Actions ---
+  $('btnReconfigure').addEventListener('click', async () => {
+    $('btnReconfigure').disabled = true;
+    try {
+      await fetch(API_BASE + '/api/reconfigure', { method: 'POST' });
+    } catch (e) {}
+    setTimeout(() => { $('btnReconfigure').disabled = false; }, 2000);
+  });
+
+  $('btnQuit').addEventListener('click', () => {
+    $('quitOverlay').classList.add('show');
+  });
+
+  $('quitCancel').addEventListener('click', () => {
+    $('quitOverlay').classList.remove('show');
+  });
+
+  $('quitConfirm').addEventListener('click', async () => {
+    $('quitOverlay').classList.remove('show');
+    $('btnQuit').disabled = true;
+    try {
+      await fetch(API_BASE + '/api/quit', { method: 'POST' });
+    } catch (e) {}
+    updateOffline();
+  });
+
+  // Close confirm on overlay click
+  $('quitOverlay').addEventListener('click', (e) => {
+    if (e.target === $('quitOverlay')) $('quitOverlay').classList.remove('show');
+  });
+
+  // Escape key closes confirm
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') $('quitOverlay').classList.remove('show');
+  });
+
+  // --- Start polling ---
+  poll();
+  pollTimer = setInterval(poll, 3000);
+})();
+</script>
+</body>
+</html>

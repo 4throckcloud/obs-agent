@@ -26,27 +26,54 @@ func Encrypt(key []byte, plaintext string) (string, error) {
 }
 
 // Decrypt decrypts a base64-encoded nonce+ciphertext using ChaCha20-Poly1305.
+//
+// DEPRECATED: Used only for migrating legacy configs. New code uses DecryptBytes.
 func Decrypt(key []byte, encoded string) (string, error) {
 	data, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode: %w", err)
 	}
 
+	plaintext, err := DecryptBytes(key, data)
+	if err != nil {
+		return "", err
+	}
+	return string(plaintext), nil
+}
+
+// EncryptBytes encrypts raw bytes using ChaCha20-Poly1305.
+// Returns nonce+ciphertext as raw bytes.
+func EncryptBytes(key, plaintext []byte) ([]byte, error) {
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
-		return "", fmt.Errorf("failed to create cipher: %w", err)
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
+	}
+
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, fmt.Errorf("failed to generate nonce: %w", err)
+	}
+
+	return aead.Seal(nonce, nonce, plaintext, nil), nil
+}
+
+// DecryptBytes decrypts raw nonce+ciphertext using ChaCha20-Poly1305.
+func DecryptBytes(key, data []byte) ([]byte, error) {
+	aead, err := chacha20poly1305.NewX(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	nonceSize := aead.NonceSize()
 	if len(data) < nonceSize {
-		return "", fmt.Errorf("ciphertext too short")
+		return nil, fmt.Errorf("ciphertext too short")
 	}
 
 	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
 	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return "", fmt.Errorf("decryption failed: %w", err)
+		return nil, fmt.Errorf("decryption failed: %w", err)
 	}
 
-	return string(plaintext), nil
+	return plaintext, nil
 }

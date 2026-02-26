@@ -123,10 +123,14 @@ do_build() {
         [[ -f "$DIST_DIR/$filename" ]] || die "Build artifact missing: $DIST_DIR/$filename"
     done
 
-    # UPX compress (best-effort)
+    # UPX compress (best-effort, skip Windows — UPX is the #1 AV false-positive trigger)
     echo "→ Compressing binaries with UPX..."
     for entry in "${BUILDS[@]}"; do
         read -r filename _ _ <<< "$entry"
+        if [[ "$filename" == *.exe ]]; then
+            echo "  SKIP: $filename (UPX triggers Windows AV false positives)"
+            continue
+        fi
         echo "  UPX: $filename"
         upx --best "$DIST_DIR/$filename" 2>/dev/null || echo "  (UPX skipped for $filename)"
     done

@@ -15,7 +15,7 @@ import (
 // DeriveKey derives a 32-byte encryption key from the agent token + machine ID
 // using HKDF-SHA256. This makes the encrypted config machine-locked.
 //
-// Returns an error if machine ID is unavailable — no silent fallback.
+// DEPRECATED: Used only for migrating legacy configs. New code uses DeriveStorageKey.
 func DeriveKey(token string) ([]byte, error) {
 	machineID, err := getMachineID()
 	if err != nil {
@@ -24,6 +24,24 @@ func DeriveKey(token string) ([]byte, error) {
 
 	// IKM = token, salt = machine ID
 	hkdfReader := hkdf.New(sha256.New, []byte(token), []byte(machineID), []byte("obs-agent-config-v1"))
+
+	key := make([]byte, 32)
+	if _, err := hkdfReader.Read(key); err != nil {
+		return nil, fmt.Errorf("HKDF key derivation failed: %w", err)
+	}
+	return key, nil
+}
+
+// DeriveStorageKey derives a 32-byte key from the machine ID alone.
+// Used for encrypting the entire config file at rest. The config is
+// machine-locked — cannot be copied to another machine and decrypted.
+func DeriveStorageKey() ([]byte, error) {
+	machineID, err := getMachineID()
+	if err != nil {
+		return nil, fmt.Errorf("machine ID required for key derivation: %w", err)
+	}
+
+	hkdfReader := hkdf.New(sha256.New, []byte(machineID), []byte("obs-agent-storage-salt"), []byte("obs-agent-config-v2"))
 
 	key := make([]byte, 32)
 	if _, err := hkdfReader.Read(key); err != nil {

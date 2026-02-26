@@ -44,6 +44,10 @@ func (g *GuiUI) Confirm(title, message string) bool {
 	return err == nil
 }
 
+func (g *GuiUI) Form(title string, fields []FormField) (map[string]string, bool) {
+	return showForm(title, fields)
+}
+
 // IsGuiAvailable returns true if native GUI dialogs can be shown.
 // Always true on Windows and macOS. On Linux, requires DISPLAY or WAYLAND_DISPLAY.
 func IsGuiAvailable() bool {

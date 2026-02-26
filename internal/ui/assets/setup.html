@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4thRock OBS Agent</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAFHUExURQAAAOlPLf///+lPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLf///////////////////////////////+lPLelPLf///////////////////////////////////////////////////////////////////////////////////////////////////+lPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLf///5gC6b0AAABrdFJOUwAAAAg0QjZi7/fxaJadnpyjAi03NVTc31Zp7PL4bAGpA6SrzIuG4i4EjQsMqMgOYK4NBo/Fw+rHATZdUA4yUhFf67sPxvdKC736VBPS/VPJXweOzy4FhsEQDAYC2R56/VpVdP5r7W9k8GoJ9xWjxAAAAAFiS0dEAmYLfGQAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfqAhgUIBQAF0UnAAABWklEQVRIx+3UR1PCQBgG4HxZK7YAUZEgWImiqDQNiA0s2EVs2LBh2/z/s2Ey47DJpuxJD7zX3Wdm68txrfzHAGprb0oHAof50NnV3RRPD4AD6MVE+lhBvyMYIIHgtQaAfH5xcIgEwwHR76PvHGAkKEkhbEhIkoKj1HVBWMAWiYxRgXfcCkxYg8mpaUMEjx2IysbVwswsFUAYxebmcXzBPLKI8VIihsLkCCRT6cwyXkkAr2Rzq3me45W13PoGz8EmxluZdCppAKjQ2F0DFLfVnV0N7JXU/QMdaCkgS3B4pB6faCB/qqpnbkD5vFK60MDlVeU66wbw5ZuqogH+tli9cwFMp2QL4u6Bfqz3D6aLg0f6seoXV4s8Bcg8v0SpF/f7+F5rhjg8PubXygSYPxC81elftP5Orw5AMr0EZJv6Y6oZHTAXGXNVfnwSZfwFTvWNRKLuvx3mt/JH+QGHtshr6w0eFgAAAABJRU5ErkJggg==">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#e94f2d;
+  --primary-hover:#ff6b4a;
+  --primary-dim:rgba(233,79,45,.15);
+  --primary-glow:rgba(233,79,45,.25);
+  --primary-border:rgba(233,79,45,.3);
+  --primary-border-hover:rgba(233,79,45,.6);
+  --bg-darker:#121212;
+  --bg-dark:#1a1a1a;
+  --bg-card:rgba(35,35,33,.7);
+  --bg-input:rgba(0,0,0,.4);
+  --border:#3a3a38;
+  --text:#ffffff;
+  --text-muted:rgba(255,255,255,.6);
+  --text-dim:rgba(255,255,255,.4);
+  --success:#00c853;
+  --error:#dc3545;
+  --warning:#ffc107;
+  --font-brand:'Press Start 2P',cursive;
+  --font-body:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+  --radius:8px;
+  --radius-sm:6px;
+}
+html{height:100%}
+body{
+  min-height:100%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-body);font-size:14px;
+  background:linear-gradient(135deg,var(--bg-darker) 0%,var(--bg-dark) 100%);
+  color:var(--text);
+}
+/* Scanlines */
+body::before{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.1),rgba(0,0,0,.1) 1px,transparent 1px,transparent 2px);
+  pointer-events:none;z-index:9999;
+}
+a{color:var(--primary);text-decoration:none}
+a:hover{color:var(--primary-hover);text-decoration:underline}
+
+/* Wizard Container */
+.wizard{
+  width:100%;max-width:480px;margin:24px;
+  background:var(--bg-card);
+  border:1px solid var(--primary-border);
+  border-radius:12px;
+  box-shadow:0 0 60px rgba(233,79,45,.06),0 4px 32px rgba(0,0,0,.5);
+  overflow:hidden;animation:fadeUp .5s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* Header */
+.wizard-header{padding:28px 32px 0;text-align:center}
+.brand{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:24px}
+.brand-icon{width:40px;height:40px;flex-shrink:0}
+.brand-icon img{width:100%;height:100%;object-fit:contain}
+.brand-text{font-family:var(--font-brand);font-size:14px;color:var(--primary);line-height:1.8}
+.brand-sub{font-family:var(--font-brand);font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:-2px}
+
+/* Steps indicator */
+.steps{display:flex;align-items:center;justify-content:center;gap:0;margin-top:4px}
+.step-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--border);transition:all .3s ease;flex-shrink:0;
+}
+.step-dot.active{background:var(--primary);box-shadow:0 0 8px var(--primary-glow)}
+.step-dot.done{background:var(--primary)}
+.step-line{width:28px;height:2px;background:var(--border);transition:background .3s ease}
+.step-line.done{background:var(--primary)}
+
+/* Body */
+.wizard-body{padding:28px 32px;min-height:280px;position:relative;overflow:hidden}
+.step{display:none;animation:stepIn .35s ease}
+.step.active{display:block}
+@keyframes stepIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.step h2{font-family:var(--font-brand);font-size:11px;color:var(--primary);line-height:1.8;margin-bottom:8px}
+.step .subtitle{color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:20px}
+
+/* Form fields */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field input{
+  width:100%;padding:10px 14px;font-size:14px;font-family:var(--font-body);
+  background:var(--bg-input);border:2px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(233,79,45,.15)}
+.field input::placeholder{color:var(--text-dim)}
+.field .hint{display:block;font-size:12px;color:var(--text-dim);margin-top:4px}
+.field .field-error{display:none;font-size:12px;color:var(--error);margin-top:4px}
+.field.has-error input,.field.has-error textarea{border-color:var(--error)}
+.field.has-error .field-error{display:block}
+
+/* Auth card */
+.auth-card{text-align:center;padding:12px 0}
+.auth-code{
+  font-family:var(--font-brand);font-size:18px;
+  letter-spacing:4px;padding:16px 24px;
+  background:var(--bg-input);border:2px solid var(--primary-border);
+  border-radius:var(--radius);display:inline-block;margin:8px 0 16px;
+  color:var(--primary);user-select:all;cursor:pointer;position:relative;
+  transition:border-color .2s;
+}
+.auth-code:hover{border-color:var(--primary-border-hover)}
+.auth-code .copied{
+  position:absolute;top:-28px;left:50%;transform:translateX(-50%);
+  font-size:10px;font-family:var(--font-body);font-weight:600;color:var(--success);
+  letter-spacing:0;opacity:0;transition:opacity .2s;
+}
+.auth-code .copied.show{opacity:1}
+.auth-url{color:var(--text-muted);font-size:14px;margin-bottom:20px}
+.auth-url a{font-weight:600}
+.auth-waiting{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text-muted);font-size:13px}
+.spinner{
+  width:16px;height:16px;border:2px solid var(--border);
+  border-top-color:var(--primary);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Detected badge */
+.detected{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;
+  background:rgba(0,200,83,.1);color:var(--success);margin-bottom:16px;
+  border:1px solid rgba(0,200,83,.2);
+}
+.detected svg{width:14px;height:14px;stroke:var(--success);fill:none;stroke-width:2.5;stroke-linecap:round}
+
+/* Test connection */
+.test-row{display:flex;align-items:center;gap:8px;margin-top:6px;min-height:24px}
+.test-btn{
+  font-size:12px;color:var(--primary);background:none;border:none;
+  cursor:pointer;padding:0;font-weight:600;font-family:var(--font-body);
+}
+.test-btn:hover{color:var(--primary-hover)}
+.test-status{font-size:12px;display:flex;align-items:center;gap:4px}
+.test-status.ok{color:var(--success)}
+.test-status.fail{color:var(--error)}
+.test-status .mini-spin{width:12px;height:12px;border-width:1.5px}
+
+/* Success */
+.success-wrap{text-align:center;padding:16px 0}
+.success-icon{
+  width:64px;height:64px;border-radius:50%;margin:0 auto 20px;
+  background:rgba(0,200,83,.1);border:2px solid rgba(0,200,83,.2);
+  display:flex;align-items:center;justify-content:center;
+}
+.success-icon svg{width:32px;height:32px;stroke:var(--success);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.checkmark-path{stroke-dasharray:48;stroke-dashoffset:48;animation:draw .6s ease .2s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.save-toggle{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-top:20px;padding:12px 16px;
+  background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);
+  font-size:13px;color:var(--text-muted);
+}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{
+  position:absolute;inset:0;border-radius:11px;background:var(--border);
+  cursor:pointer;transition:background .2s;
+}
+.toggle-track::after{
+  content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;
+  border-radius:50%;background:var(--text-dim);transition:all .2s;
+}
+.toggle input:checked+.toggle-track{background:var(--primary)}
+.toggle input:checked+.toggle-track::after{transform:translateX(18px);background:#fff}
+.save-path{font-size:11px;color:var(--text-dim);margin-top:8px;text-align:center;word-break:break-all}
+
+/* Error banner */
+.error-banner{
+  display:none;padding:10px 14px;margin-bottom:16px;
+  background:rgba(220,53,69,.1);border:1px solid rgba(220,53,69,.25);
+  border-radius:var(--radius-sm);color:var(--error);font-size:13px;
+}
+.error-banner.show{display:block}
+
+/* Footer */
+.wizard-footer{padding:0 32px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.btn{
+  padding:10px 24px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all .2s;font-family:var(--font-body);
+}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{
+  background:var(--primary);color:#fff;
+  box-shadow:0 2px 12px var(--primary-glow);
+  flex:1;max-width:200px;margin-left:auto;
+}
+.btn-primary:hover:not(:disabled){
+  background:var(--primary-hover);
+  box-shadow:0 4px 20px var(--primary-glow);transform:translateY(-1px);
+}
+.btn-secondary{
+  background:transparent;color:var(--text-muted);border:1px solid var(--border);
+}
+.btn-secondary:hover:not(:disabled){color:var(--text);border-color:var(--text-dim)}
+.btn .btn-spin{display:none;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+.btn.loading .btn-spin{display:inline-block}
+.btn.loading{pointer-events:none}
+
+/* Version footer */
+.version{text-align:center;padding:0 0 16px;font-family:var(--font-mono);font-size:10px;color:var(--text-dim)}
+
+/* Already authorized */
+.already-auth{text-align:center;padding:12px 0}
+.already-auth .name{font-weight:700;color:var(--primary)}
+
+/* Manual token */
+.token-field textarea{
+  width:100%;padding:10px 14px;font-size:12px;font-family:var(--font-mono);
+  background:var(--bg-input);border:2px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);outline:none;resize:none;
+  height:64px;transition:border-color .2s,box-shadow .2s;
+}
+.token-field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(233,79,45,.15)}
+.token-field textarea::placeholder{color:var(--text-dim)}
+
+/* Responsive */
+@media(max-width:520px){
+  .wizard{margin:12px;border-radius:8px}
+  .wizard-header,.wizard-body,.wizard-footer{padding-left:20px;padding-right:20px}
+  .auth-code{font-size:14px;letter-spacing:2px;padding:12px 16px}
+  .brand-text{font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="wizard">
+  <div class="wizard-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAFHUExURQAAAOlPLf///+lPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLf///////////////////////////////+lPLelPLf///////////////////////////////////////////////////////////////////////////////////////////////////+lPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLelPLf///5gC6b0AAABrdFJOUwAAAAg0QjZi7/fxaJadnpyjAi03NVTc31Zp7PL4bAGpA6SrzIuG4i4EjQsMqMgOYK4NBo/Fw+rHATZdUA4yUhFf67sPxvdKC736VBPS/VPJXweOzy4FhsEQDAYC2R56/VpVdP5r7W9k8GoJ9xWjxAAAAAFiS0dEAmYLfGQAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfqAhgUIBQAF0UnAAABWklEQVRIx+3UR1PCQBgG4HxZK7YAUZEgWImiqDQNiA0s2EVs2LBh2/z/s2Ey47DJpuxJD7zX3Wdm68txrfzHAGprb0oHAof50NnV3RRPD4AD6MVE+lhBvyMYIIHgtQaAfH5xcIgEwwHR76PvHGAkKEkhbEhIkoKj1HVBWMAWiYxRgXfcCkxYg8mpaUMEjx2IysbVwswsFUAYxebmcXzBPLKI8VIihsLkCCRT6cwyXkkAr2Rzq3me45W13PoGz8EmxluZdCppAKjQ2F0DFLfVnV0N7JXU/QMdaCkgS3B4pB6faCB/qqpnbkD5vFK60MDlVeU66wbw5ZuqogH+tli9cwFMp2QL4u6Bfqz3D6aLg0f6seoXV4s8Bcg8v0SpF/f7+F5rhjg8PubXygSYPxC81elftP5Orw5AMr0EZJv6Y6oZHTAXGXNVfnwSZfwFTvWNRKLuvx3mt/JH+QGHtshr6w0eFgAAAABJRU5ErkJggg==" alt="4thRock">
+      </div>
+      <div>
+        <div class="brand-text">4thRock</div>
+        <div class="brand-sub">OBS Agent</div>
+      </div>
+    </div>
+    <div class="steps" id="stepsBar"></div>
+  </div>
+
+  <div class="wizard-body">
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- Device Auth: Step 1 — Welcome + Name -->
+    <div class="step" id="step-welcome">
+      <h2>WELCOME</h2>
+      <p class="subtitle">Let's connect your OBS Studio to 4thRock Cloud in just a few steps.</p>
+      <div class="field">
+        <label for="agentName">Agent Name</label>
+        <input type="text" id="agentName" placeholder="My Streaming PC" autocomplete="off" spellcheck="false">
+        <span class="hint">How this machine appears in your dashboard</span>
+        <span class="field-error" id="nameError"></span>
+      </div>
+    </div>
+
+    <!-- Device Auth: Step 2 — Authorization -->
+    <div class="step" id="step-auth">
+      <h2>SIGN IN</h2>
+      <p class="subtitle">Authorize this agent with your 4thRock account.</p>
+      <div class="auth-card">
+        <div class="auth-code" id="authCode" title="Click to copy">
+          <span class="copied" id="copiedTip">Copied!</span>
+          <span id="codeText">----</span>
+        </div>
+        <div class="auth-url">Enter the code at <a id="authUrl" href="#" target="_blank" rel="noopener">4throck.cloud</a></div>
+        <div class="auth-waiting" id="authWaiting">
+          <div class="spinner"></div>
+          <span>Waiting for approval...</span>
+        </div>
+        <div class="already-auth" id="alreadyAuth" style="display:none">
+          <p>This machine is already authorized as <span class="name" id="alreadyName"></span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual: Step 1 — Token Entry -->
+    <div class="step" id="step-token">
+      <h2>AGENT TOKEN</h2>
+      <p class="subtitle">Paste the token from your dashboard's OBS Control Panel.</p>
+      <div class="field token-field">
+        <label for="tokenInput">Token</label>
+        <textarea id="tokenInput" placeholder="Paste your 64-character agent token here..." spellcheck="false"></textarea>
+        <span class="hint">Found in Dashboard &rarr; OBS Control &rarr; Agent Tokens</span>
+        <span class="field-error" id="tokenError"></span>
+      </div>
+    </div>
+
+    <!-- Shared: OBS Connection -->
+    <div class="step" id="step-obs">
+      <h2>OBS CONNECTION</h2>
+      <p class="subtitle">Configure the connection to your local OBS WebSocket server.</p>
+      <div class="detected" id="detectedBadge" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+        OBS detected automatically
+      </div>
+      <div class="field">
+        <label for="obsHost">Host</label>
+        <input type="text" id="obsHost" value="localhost" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="obsPort">Port</label>
+        <input type="number" id="obsPort" value="4455" min="1" max="65535">
+      </div>
+      <div class="field">
+        <label for="obsPass">Password</label>
+        <input type="password" id="obsPass" placeholder="Leave blank if none" autocomplete="off">
+        <div class="test-row">
+          <button class="test-btn" id="testBtn" type="button">Test connection</button>
+          <span class="test-status" id="testStatus"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shared: Complete -->
+    <div class="step" id="step-done">
+      <div class="success-wrap">
+        <div class="success-icon">
+          <svg viewBox="0 0 24 24"><path class="checkmark-path" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h2>ALL SET!</h2>
+        <p class="subtitle">Your OBS Agent is configured and ready to connect.</p>
+        <div class="save-toggle">
+          <label class="toggle">
+            <input type="checkbox" id="saveCheck" checked>
+            <span class="toggle-track"></span>
+          </label>
+          <span>Save configuration for next time</span>
+        </div>
+        <div class="save-path" id="savePath"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-secondary" id="btnBack" style="display:none">Back</button>
+    <button class="btn btn-primary" id="btnNext"><span class="btn-spin"></span><span class="btn-label">Continue</span></button>
+  </div>
+
+  <div class="version" id="versionLabel">4thRock OBS Agent</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // --- Remote/local detection ---
+  const _params = new URLSearchParams(location.search);
+  const _port = _params.get('port');
+  const API_BASE = _port ? 'http://127.0.0.1:' + _port : '';
+
+  // --- State ---
+  let mode = _params.get('mode') || 'device';
+  let flow = [];
+  let currentIdx = 0;
+  let defaults = {};
+  let authPollTimer = null;
+  let authAlready = false;
+
+  // --- DOM refs ---
+  const $ = id => document.getElementById(id);
+  const stepsBar = $('stepsBar');
+  const errorBanner = $('errorBanner');
+  const btnNext = $('btnNext');
+  const btnBack = $('btnBack');
+  const btnLabel = btnNext.querySelector('.btn-label');
+
+  // --- Init ---
+  async function init() {
+    try {
+      const res = await api('/api/wizard/state');
+      mode = res.mode || mode;
+      defaults = res.defaults || {};
+      if (res.version) $('versionLabel').textContent = '4thRock OBS Agent v' + res.version;
+
+      if (defaults.host) $('obsHost').value = defaults.host;
+      if (defaults.port) $('obsPort').value = defaults.port;
+      if (defaults.obs_detected) $('detectedBadge').style.display = '';
+
+      if (mode === 'device') {
+        flow = ['step-welcome', 'step-auth', 'step-obs', 'step-done'];
+      } else if (mode === 'manual') {
+        flow = ['step-token', 'step-obs', 'step-done'];
+      } else {
+        flow = ['step-obs', 'step-done'];
+      }
+
+      buildSteps();
+      showStep(0);
+    } catch (e) {
+      showError(_port
+        ? 'Could not connect to local agent on port ' + _port + '. Make sure the OBS Agent is running.'
+        : 'Could not connect to agent: ' + e.message);
+    }
+  }
+
+  // --- Steps bar ---
+  function buildSteps() {
+    stepsBar.innerHTML = '';
+    for (let i = 0; i < flow.length; i++) {
+      if (i > 0) {
+        const line = document.createElement('div');
+        line.className = 'step-line';
+        line.dataset.idx = i;
+        stepsBar.appendChild(line);
+      }
+      const dot = document.createElement('div');
+      dot.className = 'step-dot';
+      dot.dataset.idx = i;
+      stepsBar.appendChild(dot);
+    }
+    updateSteps();
+  }
+
+  function updateSteps() {
+    stepsBar.querySelectorAll('.step-dot').forEach(d => {
+      const i = +d.dataset.idx;
+      d.className = 'step-dot' + (i < currentIdx ? ' done' : '') + (i === currentIdx ? ' active' : '');
+    });
+    stepsBar.querySelectorAll('.step-line').forEach(l => {
+      const i = +l.dataset.idx;
+      l.className = 'step-line' + (i <= currentIdx ? ' done' : '');
+    });
+  }
+
+  function showStep(idx) {
+    currentIdx = idx;
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    const stepEl = $(flow[idx]);
+    if (stepEl) stepEl.classList.add('active');
+    updateSteps();
+    hideError();
+
+    btnBack.style.display = idx > 0 && flow[idx] !== 'step-done' ? '' : 'none';
+
+    const isLast = flow[idx] === 'step-done';
+    const isAuth = flow[idx] === 'step-auth';
+    btnLabel.textContent = isLast ? 'Finish' : isAuth ? 'Waiting...' : 'Continue';
+    btnNext.disabled = isAuth && !authAlready;
+
+    const firstInput = stepEl && stepEl.querySelector('input,textarea');
+    if (firstInput) setTimeout(() => firstInput.focus(), 100);
+  }
+
+  // --- API helper ---
+  async function api(url, body) {
+    const opts = { headers: { 'Content-Type': 'application/json' } };
+    if (body !== undefined) {
+      opts.method = 'POST';
+      opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(API_BASE + url, opts);
+    return res.json();
+  }
+
+  // --- Error display ---
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.classList.add('show');
+  }
+  function hideError() {
+    errorBanner.classList.remove('show');
+  }
+
+  // --- Button loading state ---
+  function setLoading(on) {
+    if (on) { btnNext.classList.add('loading'); btnNext.disabled = true; }
+    else { btnNext.classList.remove('loading'); btnNext.disabled = false; }
+  }
+
+  // --- Next button handler ---
+  btnNext.addEventListener('click', async () => {
+    const step = flow[currentIdx];
+    if (step === 'step-welcome') await handleWelcome();
+    else if (step === 'step-auth') advance();
+    else if (step === 'step-token') await handleToken();
+    else if (step === 'step-obs') await handleOBS();
+    else if (step === 'step-done') await handleDone();
+  });
+
+  btnBack.addEventListener('click', () => {
+    if (currentIdx > 0) showStep(currentIdx - 1);
+  });
+
+  function advance() {
+    if (currentIdx < flow.length - 1) showStep(currentIdx + 1);
+  }
+
+  // --- Step handlers ---
+
+  async function handleWelcome() {
+    const name = $('agentName').value.trim();
+    if (!name) {
+      setFieldError('agentName', 'nameError', 'Please enter a name for this agent');
+      return;
+    }
+    clearFieldError('agentName', 'nameError');
+    setLoading(true);
+
+    try {
+      const res = await api('/api/wizard/name', { name });
+      if (res.error) { showError(res.error); setLoading(false); return; }
+
+      if (res.already_authorized) {
+        authAlready = true;
+        $('authWaiting').style.display = 'none';
+        $('alreadyAuth').style.display = '';
+        $('alreadyName').textContent = res.agent_name || name;
+        setLoading(false);
+        advance();
+        setTimeout(() => advance(), 600);
+        return;
+      }
+
+      $('codeText').textContent = res.user_code || '----';
+      const url = res.verification_url || '#';
+      $('authUrl').href = url;
+      $('authUrl').textContent = url.replace(/^https?:\/\//, '');
+      setLoading(false);
+      advance();
+      startAuthPoll(res.poll_interval || 5);
+    } catch (e) {
+      showError('Connection failed: ' + e.message);
+      setLoading(false);
+    }
+  }
+
+  function startAuthPoll(interval) {
+    if (authPollTimer) clearInterval(authPollTimer);
+    authPollTimer = setInterval(async () => {
+      try {
+        const res = await api('/api/wizard/poll');
+        if (res.status === 'complete') {
+          clearInterval(authPollTimer);
+          authPollTimer = null;
+          $('authWaiting').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00c853" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span style="color:#00c853;font-weight:600">Authorized!</span>';
+          btnLabel.textContent = 'Continue';
+          btnNext.disabled = false;
+        } else if (res.status === 'error' || res.status === 'denied' || res.status === 'expired') {
+          clearInterval(authPollTimer);
+          authPollTimer = null;
+          const msg = res.error || 'Authorization was ' + res.status;
+          $('authWaiting').innerHTML = '<span style="color:var(--error)">' + escHtml(msg) + '</span>';
+          showError(msg);
+        }
+      } catch (e) { /* keep polling */ }
+    }, interval * 1000);
+  }
+
+  async function handleToken() {
+    const token = $('tokenInput').value.trim().toLowerCase();
+    if (!token) { setFieldError('tokenInput', 'tokenError', 'Please paste your agent token'); return; }
+    if (!/^[0-9a-f]{64}$/.test(token)) { setFieldError('tokenInput', 'tokenError', 'Token must be exactly 64 hexadecimal characters'); return; }
+    clearFieldError('tokenInput', 'tokenError');
+    setLoading(true);
+
+    try {
+      const res = await api('/api/wizard/token', { token });
+      if (!res.valid) { showError(res.error || 'Invalid token'); setLoading(false); return; }
+      setLoading(false);
+      advance();
+    } catch (e) {
+      showError('Connection failed: ' + e.message);
+      setLoading(false);
+    }
+  }
+
+  async function handleOBS() {
+    const host = $('obsHost').value.trim() || 'localhost';
+    const port = parseInt($('obsPort').value) || 4455;
+    const password = $('obsPass').value;
+
+    if (port < 1 || port > 65535) { showError('Port must be between 1 and 65535'); return; }
+
+    setLoading(true);
+    try {
+      const res = await api('/api/wizard/obs', { host, port, password });
+      if (res.error) { showError(res.error); setLoading(false); return; }
+      setLoading(false);
+      advance();
+    } catch (e) {
+      showError('Connection failed: ' + e.message);
+      setLoading(false);
+    }
+  }
+
+  async function handleDone() {
+    const save = $('saveCheck').checked;
+    setLoading(true);
+
+    try {
+      if (save) {
+        const res = await api('/api/wizard/save', {});
+        if (res.saved) {
+          $('savePath').textContent = 'Saved to ' + (res.path || 'config file');
+        } else if (res.error) {
+          $('savePath').textContent = 'Could not save: ' + res.error;
+          $('savePath').style.color = 'var(--error)';
+        }
+      }
+
+      const doneRes = await api('/api/wizard/done', { saved: save });
+      btnLabel.textContent = 'Done!';
+      btnNext.disabled = true;
+
+      if (doneRes.status_url) {
+        $('savePath').textContent = 'Redirecting to status dashboard...';
+        setTimeout(() => { window.location.href = doneRes.status_url; }, 1000);
+      } else {
+        setTimeout(() => {
+          const prev = $('savePath').textContent;
+          $('savePath').textContent = (prev ? prev + ' \u2014 ' : '') + 'You can close this tab. The agent is running.';
+        }, 500);
+      }
+    } catch (e) {
+      setLoading(false);
+    }
+  }
+
+  // --- Test OBS connection ---
+  $('testBtn').addEventListener('click', async () => {
+    const st = $('testStatus');
+    st.className = 'test-status';
+    st.innerHTML = '<div class="spinner mini-spin"></div> Testing...';
+
+    try {
+      const res = await api('/api/wizard/test-obs', {
+        host: $('obsHost').value.trim() || 'localhost',
+        port: parseInt($('obsPort').value) || 4455,
+        password: $('obsPass').value,
+      });
+      if (res.ok) {
+        st.className = 'test-status ok';
+        st.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Connected' + (res.version ? ' (v' + escHtml(res.version) + ')' : '');
+      } else {
+        st.className = 'test-status fail';
+        st.textContent = res.error || 'Connection failed';
+      }
+    } catch (e) {
+      st.className = 'test-status fail';
+      st.textContent = 'Network error';
+    }
+  });
+
+  // --- Copy auth code ---
+  $('authCode').addEventListener('click', () => {
+    const code = $('codeText').textContent;
+    if (code && code !== '----') {
+      navigator.clipboard.writeText(code).then(() => {
+        $('copiedTip').classList.add('show');
+        setTimeout(() => $('copiedTip').classList.remove('show'), 1500);
+      });
+    }
+  });
+
+  // --- Enter key advances ---
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !btnNext.disabled && !e.target.matches('textarea')) {
+      e.preventDefault();
+      btnNext.click();
+    }
+  });
+
+  // --- Field error helpers ---
+  function setFieldError(inputId, errorId, msg) {
+    $(inputId).parentElement.classList.add('has-error');
+    $(errorId).textContent = msg;
+  }
+  function clearFieldError(inputId, errorId) {
+    $(inputId).parentElement.classList.remove('has-error');
+    $(errorId).textContent = '';
+  }
+
+  function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

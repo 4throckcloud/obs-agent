@@ -1,93 +1,158 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/4throck/obs-agent/internal/crypto"
 )
 
-// Config holds agent configuration
+// configHeader identifies the encrypted config format on disk.
+// Files starting with this header are machine-locked encrypted blobs.
+const configHeader = "OBSAGENT2\n"
+
+// Config holds agent configuration (runtime only, never serialized directly)
 type Config struct {
-	RelayURL string `json:"relay_url"`
-	Token    string `json:"token"`
-	OBSHost  string `json:"obs_host"`
-	OBSPort  int    `json:"obs_port"`
-	OBSPass  string `json:"obs_pass"`
-	Version  string `json:"-"`
+	RelayURL string // hardcoded in binary, never stored on disk
+	Token    string
+	OBSHost  string
+	OBSPort  int
+	OBSPass  string
+	Version  string
 }
 
-// configFile is the on-disk format (password encrypted)
-type configFile struct {
-	RelayURL     string `json:"relay_url"`
-	Token        string `json:"token"`
-	OBSHost      string `json:"obs_host"`
-	OBSPort      int    `json:"obs_port"`
-	OBSPassEnc   string `json:"obs_pass_enc,omitempty"`
+// configData is the internal structure encrypted on disk.
+// Never visible as JSON to users — the file is an opaque binary blob.
+type configData struct {
+	Token   string `json:"token"`
+	OBSHost string `json:"obs_host"`
+	OBSPort int    `json:"obs_port"`
+	OBSPass string `json:"obs_pass,omitempty"`
 }
 
-// LoadConfig reads and decrypts a config file
+// legacyConfigFile is the old plaintext JSON format (migration only)
+type legacyConfigFile struct {
+	RelayURL   string `json:"relay_url"`
+	Token      string `json:"token"`
+	OBSHost    string `json:"obs_host"`
+	OBSPort    int    `json:"obs_port"`
+	OBSPassEnc string `json:"obs_pass_enc,omitempty"`
+}
+
+// LoadConfig reads and decrypts a config file.
+// Handles both the new encrypted format and legacy plaintext JSON.
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var cf configFile
-	if err := json.Unmarshal(data, &cf); err != nil {
+	// New encrypted format
+	if bytes.HasPrefix(data, []byte(configHeader)) {
+		return loadEncrypted(data)
+	}
+
+	// Legacy plaintext JSON (auto-migrates on next save)
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) > 0 && trimmed[0] == '{' {
+		return loadLegacy(data)
+	}
+
+	return nil, fmt.Errorf("unrecognized config format")
+}
+
+func loadEncrypted(data []byte) (*Config, error) {
+	payload := data[len(configHeader):]
+	encoded := strings.TrimSpace(string(payload))
+
+	ciphertext, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("config decode failed: %w", err)
+	}
+
+	key, err := crypto.DeriveStorageKey()
+	if err != nil {
+		return nil, fmt.Errorf("cannot derive key: %w", err)
+	}
+
+	plaintext, err := crypto.DecryptBytes(key, ciphertext)
+	if err != nil {
+		return nil, fmt.Errorf("config decryption failed (wrong machine?): %w", err)
+	}
+
+	var cd configData
+	if err := json.Unmarshal(plaintext, &cd); err != nil {
+		return nil, fmt.Errorf("config parse failed: %w", err)
+	}
+
+	return &Config{
+		Token:   cd.Token,
+		OBSHost: cd.OBSHost,
+		OBSPort: cd.OBSPort,
+		OBSPass: cd.OBSPass,
+	}, nil
+}
+
+func loadLegacy(data []byte) (*Config, error) {
+	var lf legacyConfigFile
+	if err := json.Unmarshal(data, &lf); err != nil {
 		return nil, err
 	}
 
 	cfg := &Config{
-		RelayURL: cf.RelayURL,
-		Token:    cf.Token,
-		OBSHost:  cf.OBSHost,
-		OBSPort:  cf.OBSPort,
+		Token:   lf.Token,
+		OBSHost: lf.OBSHost,
+		OBSPort: lf.OBSPort,
 	}
 
-	// Decrypt OBS password if present
-	if cf.OBSPassEnc != "" {
-		key, err := crypto.DeriveKey(cf.Token)
-		if err != nil {
-			return nil, fmt.Errorf("cannot decrypt config (machine ID required): %w", err)
+	// Decrypt OBS password using old token-based key
+	if lf.OBSPassEnc != "" && lf.Token != "" {
+		key, err := crypto.DeriveKey(lf.Token)
+		if err == nil {
+			if pass, err := crypto.Decrypt(key, lf.OBSPassEnc); err == nil {
+				cfg.OBSPass = pass
+			}
 		}
-		pass, err := crypto.Decrypt(key, cf.OBSPassEnc)
-		if err != nil {
-			return nil, err
-		}
-		cfg.OBSPass = pass
 	}
 
 	return cfg, nil
 }
 
-// SaveConfig encrypts and saves config to disk
+// SaveConfig encrypts and saves config as an opaque machine-locked blob.
+// The relay URL is never stored — it is hardcoded in the binary.
 func SaveConfig(path string, cfg *Config) error {
-	cf := configFile{
-		RelayURL: cfg.RelayURL,
-		Token:    cfg.Token,
-		OBSHost:  cfg.OBSHost,
-		OBSPort:  cfg.OBSPort,
+	cd := configData{
+		Token:   cfg.Token,
+		OBSHost: cfg.OBSHost,
+		OBSPort: cfg.OBSPort,
+		OBSPass: cfg.OBSPass,
 	}
 
-	// Encrypt OBS password
-	if cfg.OBSPass != "" {
-		key, err := crypto.DeriveKey(cfg.Token)
-		if err != nil {
-			return fmt.Errorf("cannot encrypt config (machine ID required): %w", err)
-		}
-		enc, err := crypto.Encrypt(key, cfg.OBSPass)
-		if err != nil {
-			return err
-		}
-		cf.OBSPassEnc = enc
-	}
-
-	data, err := json.MarshalIndent(cf, "", "  ")
+	plaintext, err := json.Marshal(cd)
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0600)
+	key, err := crypto.DeriveStorageKey()
+	if err != nil {
+		return fmt.Errorf("cannot derive key: %w", err)
+	}
+
+	ciphertext, err := crypto.EncryptBytes(key, plaintext)
+	if err != nil {
+		return err
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(ciphertext)
+
+	var buf bytes.Buffer
+	buf.WriteString(configHeader)
+	buf.WriteString(encoded)
+	buf.WriteByte('\n')
+
+	return os.WriteFile(path, buf.Bytes(), 0600)
 }

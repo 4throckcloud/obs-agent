@@ -7,26 +7,15 @@ set -euo pipefail
 #   ./release.sh 1.0.0              Build + upload to staging (GitHub prerelease)
 #   ./release.sh 1.0.0 --promote    Promote to stable (GitHub latest release)
 #
-# R2 layout (manifests only):
-#   agent/manifest.json             ← stable manifest
-#   agent/manifest-staging.json     ← staging manifest
-#
 # GitHub Releases (4throckcloud/obs-agent):
 #   vX.Y.Z prerelease → promoted to latest on --promote
-#   Assets: obs-agent-{platform}.zip
+#   Assets: obs-agent-{platform}.zip + manifest.json
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 OBS_STACK_DIR="$(cd "$AGENT_DIR/.." && pwd)"
 MONO_REPO_DIR="$(cd "$OBS_STACK_DIR/.." && pwd)"
 DIST_DIR="$AGENT_DIR/dist"
-
-# R2 config (manifests only)
-R2_ACCOUNT_ID="f4c0a9e2ce9585ee94c49de7c493f278"
-R2_BUCKET="4throck"
-R2_PUBLIC_URL="https://media.4throck.cloud"
-R2_TOKEN_FILE="/home/ubuntu/production/widgets-stack/secrets/r2_api_token"
-R2_BASE="https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT_ID}/r2/buckets/${R2_BUCKET}/objects"
 
 # Docker / GHCR config
 DOCKER_IMAGE="ghcr.io/4throckcloud/obs-agent"
@@ -64,12 +53,6 @@ validate_semver() {
     [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Invalid version: $1 (must be X.Y.Z)"
 }
 
-load_r2_token() {
-    [[ -f "$R2_TOKEN_FILE" ]] || die "R2 token file not found: $R2_TOKEN_FILE"
-    R2_TOKEN="$(cat "$R2_TOKEN_FILE" | tr -d '[:space:]')"
-    [[ -n "$R2_TOKEN" ]] || die "R2 token is empty"
-}
-
 load_gh_token() {
     [[ -f "$GH_TOKEN_FILE" ]] || die "GitHub token file not found: $GH_TOKEN_FILE"
     export GH_TOKEN
@@ -84,29 +67,6 @@ zip_name() {
         echo "${filename%.exe}.zip"
     else
         echo "${filename}.zip"
-    fi
-}
-
-r2_upload() {
-    local file="$1" key="$2" content_type="${3:-application/octet-stream}"
-    local response
-    response=$(curl -s -w "\n%{http_code}" \
-        -X PUT \
-        -H "Authorization: Bearer $R2_TOKEN" \
-        -H "Content-Type: $content_type" \
-        --data-binary "@$file" \
-        "$R2_BASE/$key")
-    local http_code
-    http_code=$(echo "$response" | tail -1)
-    local body
-    body=$(echo "$response" | sed '$d')
-
-    if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
-        local size
-        size=$(echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',{}).get('size','?'))" 2>/dev/null || echo "?")
-        echo "  ✓ $key (${size} bytes)"
-    else
-        die "R2 upload failed for $key (HTTP $http_code): $body"
     fi
 }
 
@@ -233,7 +193,6 @@ do_build() {
         echo "  UPX: $filename"
         upx --best "$DIST_DIR/$filename" 2>/dev/null || echo "  (UPX skipped for $filename)"
     done
-    # Also compress linux-arm64 for Docker
     for extra in "${DOCKER_EXTRA_BINARIES[@]}"; do
         echo "  UPX: $extra"
         upx --best "$DIST_DIR/$extra" 2>/dev/null || echo "  (UPX skipped for $extra)"
@@ -251,7 +210,11 @@ do_build() {
         echo "  ✓ $zname"
     done
 
-    # Create GitHub prerelease with zip assets
+    # Generate manifest
+    echo "→ Generating manifest..."
+    generate_manifest "$version" "staging" "v${version}" > "$DIST_DIR/manifest.json"
+
+    # Create GitHub prerelease with zip assets + manifest
     load_gh_token
     echo "→ Creating GitHub prerelease v${version}..."
     gh release create "v${version}" \
@@ -259,16 +222,9 @@ do_build() {
         --prerelease \
         --title "v${version}" \
         --notes "Staging release v${version}" \
-        "${zip_assets[@]}"
-    echo "  ✓ GitHub prerelease created"
-
-    # Generate + upload staging manifest
-    echo "→ Generating manifest..."
-    generate_manifest "$version" "staging" "v${version}" > "$DIST_DIR/manifest-staging.json"
-
-    load_r2_token
-    echo "→ Uploading staging manifest to R2..."
-    r2_upload "$DIST_DIR/manifest-staging.json" "agent/manifest-staging.json" "application/json"
+        "${zip_assets[@]}" \
+        "$DIST_DIR/manifest.json"
+    echo "  ✓ GitHub prerelease created (with manifest)"
 
     # Docker multi-arch image build + push
     ensure_buildx
@@ -279,7 +235,6 @@ do_build() {
     echo "═══════════════════════════════════════════════════════════"
     echo "  Staging complete! v${version}"
     echo "  GitHub:   https://github.com/${GH_REPO}/releases/tag/v${version} (prerelease)"
-    echo "  Manifest: ${R2_PUBLIC_URL}/agent/manifest-staging.json"
     echo "  Docker:   ${DOCKER_IMAGE}:v${version} / :staging"
     echo ""
     echo "  Test the staging binary, then promote:"
@@ -305,23 +260,23 @@ do_promote() {
     done
     echo "  ✓ Local dist/ verified"
 
-    # Promote GitHub prerelease → latest release
+    # Re-generate manifest with stable channel and upload to release
     load_gh_token
+    echo "→ Updating manifest to stable channel..."
+    generate_manifest "$version" "stable" "latest" > "$DIST_DIR/manifest.json"
+    gh release upload "v${version}" \
+        --repo "$GH_REPO" \
+        --clobber \
+        "$DIST_DIR/manifest.json"
+    echo "  ✓ Stable manifest uploaded"
+
+    # Promote GitHub prerelease → latest release
     echo "→ Promoting GitHub release v${version} to latest..."
     gh release edit "v${version}" \
         --repo "$GH_REPO" \
         --prerelease=false \
         --latest
     echo "  ✓ GitHub release marked as latest"
-
-    # Generate + upload stable manifest
-    load_r2_token
-    echo "→ Generating stable manifest..."
-    local tmpfile
-    tmpfile=$(mktemp)
-    generate_manifest "$version" "stable" "latest" > "$tmpfile"
-    r2_upload "$tmpfile" "agent/manifest.json" "application/json"
-    rm -f "$tmpfile"
 
     # Docker: rebuild with :latest tag (multi-arch)
     ensure_buildx
@@ -348,7 +303,7 @@ do_promote() {
     echo "═══════════════════════════════════════════════════════════"
     echo "  ✓ Promoted v${version} to STABLE"
     echo "  GitHub:   https://github.com/${GH_REPO}/releases/tag/v${version}"
-    echo "  Manifest: ${R2_PUBLIC_URL}/agent/manifest.json"
+    echo "  Manifest: https://github.com/${GH_REPO}/releases/latest/download/manifest.json"
     echo "  Docker:   ${DOCKER_IMAGE}:latest"
     echo "═══════════════════════════════════════════════════════════"
 }

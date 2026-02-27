@@ -1,21 +1,28 @@
-# OBS Agent
+<h1 align="center">4thRock OBS Agent</h1>
 
-Secure relay agent that connects your local [OBS Studio](https://obsproject.com/) to [4thRock Cloud](https://4throck.cloud) for remote control. Runs as a lightweight background process on Windows, macOS, and Linux.
+<p align="center">
+  <strong>Remote OBS control, powered by 4thRock Cloud</strong><br>
+  <em>Secure relay agent for Windows, macOS & Linux</em>
+</p>
+
+<p align="center">
+  <b>Latest:</b> v2.25.0
+</p>
+
+---
 
 ## How It Works
 
 ```
 ┌─────────────────┐          ┌──────────────┐          ┌────────────────┐
-│   4thRock Cloud  │◄── WSS ──►  OBS Agent   │◄── WS ──►  OBS Studio    │
-│   (relay server) │          │  (this app)  │          │  (local)       │
+│  4thRock Cloud   │◄── WSS ──►  OBS Agent   │◄── WS ──►  OBS Studio    │
+│  (relay server)  │          │  (this app)  │          │  (local)       │
 └─────────────────┘          └──────────────┘          └────────────────┘
 ```
 
-The agent maintains a persistent WebSocket tunnel to the relay server with signed message envelopes. All commands are authenticated and verified with HMAC-SHA256 signatures and replay protection.
+The agent maintains a persistent WebSocket tunnel to the 4thRock relay server. All commands are authenticated with HMAC-SHA256 signed envelopes and replay protection.
 
 ## Download
-
-**Latest:** v2.25.0
 
 | Platform | Download |
 |----------|----------|
@@ -24,12 +31,11 @@ The agent maintains a persistent WebSocket tunnel to the relay server with signe
 | macOS Apple Silicon | [obs-agent-mac-apple.zip](https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-mac-apple.zip) |
 | Linux | [obs-agent-linux-amd64.zip](https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-linux-amd64.zip) |
 
-Latest version and checksums: [`manifest.json`](https://github.com/4throckcloud/obs-agent/releases/latest/download/manifest.json)
+Checksums: [`manifest.json`](https://github.com/4throckcloud/obs-agent/releases/latest/download/manifest.json)
 
 ### macOS / Linux
 
 ```bash
-# Download (replace URL with your platform)
 curl -Lo obs-agent.zip https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-linux-amd64.zip
 unzip obs-agent.zip
 chmod +x obs-agent-linux-amd64
@@ -50,10 +56,10 @@ docker run -d --name obs-agent \
 
 1. **Download** the binary for your platform
 2. **Run it** — a setup wizard opens in your browser
-3. **Authorize** — enter the code shown on your 4thRock dashboard
+3. **Authorize** — enter the code shown on your [4thRock dashboard](https://4throck.cloud)
 4. The agent connects to OBS automatically
 
-The agent stores an encrypted config file (`obs-agent.dat`) next to the binary, locked to your machine.
+Config is stored encrypted (`obs-agent.dat`) next to the binary, locked to your machine.
 
 ## Usage
 
@@ -85,11 +91,8 @@ obs-agent [flags]
 Install as a startup service so the agent runs automatically:
 
 ```bash
-# Install
-./obs-agent -install
-
-# Uninstall
-./obs-agent -uninstall
+./obs-agent -install     # Install
+./obs-agent -uninstall   # Uninstall
 ```
 
 | Platform | Method |
@@ -101,10 +104,10 @@ Install as a startup service so the agent runs automatically:
 ## Security
 
 - **TLS 1.3** minimum for all relay connections
-- **Signed envelopes** — every message carries an HMAC-SHA256 signature with nonce and timestamp
+- **Signed envelopes** — HMAC-SHA256 with nonce and timestamp on every message
 - **Replay protection** — nonce cache with 30-second timestamp window
-- **Machine-locked config** — AES-256 encrypted, derived from hardware ID via HKDF
-- **No secrets in URLs** — token sent via headers, never query parameters
+- **Machine-locked config** — AES-256 encrypted via HKDF from hardware ID
+- **No secrets in URLs** — token sent via headers only
 - **Single instance lock** — prevents duplicate agents per directory
 
 ## Building from Source
@@ -119,6 +122,8 @@ CGO_ENABLED=0 go build -ldflags="-s -w" -o obs-agent ./cmd/agent
 docker compose run --rm obs-agent-builder make -C build build-all VERSION=v1.0.0
 ```
 
-## License
+---
 
-Copyright 2026 4thRock Cloud. All rights reserved.
+<p align="center">
+  <sub>Copyright 2026 <a href="https://4throck.cloud">4thRock Cloud</a>. All rights reserved.</sub>
+</p>

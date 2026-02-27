@@ -21,7 +21,7 @@
   "StringFileInfo": {
     "Comments": "",
     "CompanyName": "4thRock Cloud",
-    "FileDescription": "OBS Studio Remote Control Agent",
+    "FileDescription": "4thRock OBS Agent",
     "FileVersion": "v1.4.0",
     "InternalName": "obs-agent",
     "LegalCopyright": "Copyright (c) 2026 4thRock Cloud",
@@ -37,6 +37,6 @@
       "CharsetID": "04B0"
     }
   },
-  "IconPath": "",
+  "IconPath": "icon.ico",
   "ManifestPath": "obs-agent.exe.manifest"
 }

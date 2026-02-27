@@ -249,12 +249,14 @@ var allowedRequestTypes = map[string]bool{
 	"CreateScene": true, "RemoveScene": true, "SetSceneName": true,
 	// Scene items (sources within scenes)
 	"GetSceneItemList": true, "GetGroupSceneItemList": true, "GetSceneItemEnabled": true, "SetSceneItemEnabled": true,
-	"GetSceneItemTransform": true, "SetSceneItemTransform": true, "SetSceneItemIndex": true, "RemoveSceneItem": true,
+	"GetSceneItemTransform": true, "SetSceneItemTransform": true, "SetSceneItemIndex": true, "SetSceneItemBlendMode": true, "SetSceneItemLocked": true, "RemoveSceneItem": true,
 	// Sources / Inputs
-	"GetSourcesList": true, "GetSourceActive": true, "SetSourceFilterEnabled": true,
+	"GetSourcesList": true, "GetSourceActive": true,
+	"GetSourceFilterList": true, "CreateSourceFilter": true, "SetSourceFilterEnabled": true,
 	"CreateInput": true, "CreateSceneItem": true, "GetInputList": true, "RemoveInput": true,
 	"GetInputSettings": true, "SetInputSettings": true, "SetInputName": true,
 	"GetInputMute": true, "SetInputMute": true, "ToggleInputMute": true, "GetInputVolume": true, "SetInputVolume": true,
+	"GetInputAudioMonitorType": true, "SetInputAudioMonitorType": true,
 	// Stream
 	"GetStreamStatus": true, "StartStream": true, "StopStream": true, "ToggleStream": true,
 	// Record

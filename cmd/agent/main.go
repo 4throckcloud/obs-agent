@@ -44,11 +44,8 @@ func main() {
 	// Relay URL is hardcoded — not configurable by users
 	const relayURL = "wss://4throck.cloud/ws/agent"
 
-	// OBS host defaults to localhost; Docker sets OBS_HOST=host.docker.internal
-	obsHost := "localhost"
-	if h := os.Getenv("OBS_HOST"); h != "" {
-		obsHost = h
-	}
+	// OBS host is hardcoded — localhost for native, host.docker.internal for Docker
+	obsHost := detectOBSHost()
 
 	var (
 		token   string
@@ -391,7 +388,7 @@ func handleReconfigure(w ui.UI, cfg *agent.Config, savePath string, statusSrv *s
 			return
 		}
 
-		cfg.OBSHost = result.OBSHost
+		// OBSHost is hardcoded — only take port/pass/token from wizard
 		cfg.OBSPort = result.OBSPort
 		cfg.OBSPass = result.OBSPass
 		if result.Token != "" {
@@ -513,7 +510,7 @@ func runWizardSetup(w ui.UI, cfg *agent.Config, savePath string, detected *obsDe
 		}
 
 		cfg.Token = result.Token
-		cfg.OBSHost = result.OBSHost
+		// OBSHost is hardcoded — only take port/pass from wizard
 		cfg.OBSPort = result.OBSPort
 		cfg.OBSPass = result.OBSPass
 		return
@@ -699,6 +696,16 @@ func autoDetectOBS() *obsDetectResult {
 	return nil
 }
 
+// detectOBSHost returns the hardcoded OBS host.
+// In Docker (/.dockerenv exists), OBS is on the host network.
+// Otherwise it's always localhost.
+func detectOBSHost() string {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return "host.docker.internal"
+	}
+	return "localhost"
+}
+
 // fatalWait shows an error via GUI dialog or stderr, then exits.
 func fatalWait(msg string) {
 	log.Println(msg)
@@ -828,17 +835,15 @@ func runSetup(w ui.UI, cfg *agent.Config, savePath string, detected *obsDetectRe
 	autoSaveConfig(w, savePath, cfg)
 }
 
-// collectOBSSettings shows a single form dialog for OBS host, port, and password.
+// collectOBSSettings shows a form dialog for OBS port and password.
+// OBS host is hardcoded and not configurable.
 func collectOBSSettings(w ui.UI, cfg *agent.Config, detected *obsDetectResult) {
-	defaultHost := cfg.OBSHost
 	defaultPort := cfg.OBSPort
 	if detected != nil {
-		defaultHost = detected.Host
 		defaultPort = detected.Port
 	}
 
 	fields := []ui.FormField{
-		{Label: "OBS WebSocket host", Key: "host", Default: defaultHost},
 		{Label: "OBS WebSocket port", Key: "port", Default: strconv.Itoa(defaultPort)},
 		{Label: "OBS WebSocket password (blank if none)", Key: "password", Password: true},
 	}
@@ -846,15 +851,8 @@ func collectOBSSettings(w ui.UI, cfg *agent.Config, detected *obsDetectResult) {
 	values, ok := w.Form("OBS Connection", fields)
 	if !ok {
 		// User cancelled — keep defaults
-		cfg.OBSHost = defaultHost
 		cfg.OBSPort = defaultPort
 		return
-	}
-
-	if h := strings.TrimSpace(values["host"]); h != "" {
-		cfg.OBSHost = h
-	} else {
-		cfg.OBSHost = defaultHost
 	}
 
 	if p, err := strconv.Atoi(strings.TrimSpace(values["port"])); err == nil && p > 0 && p < 65536 {

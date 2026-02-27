@@ -20,17 +20,17 @@ github.com/ncruces/zenity/internal/zenutil
 # github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844
 ## explicit; go 1.13
 github.com/randall77/makefat
-# golang.org/x/crypto v0.28.0
-## explicit; go 1.20
+# golang.org/x/crypto v0.48.0
+## explicit; go 1.24.0
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
-# golang.org/x/image v0.20.0
-## explicit; go 1.18
+# golang.org/x/image v0.36.0
+## explicit; go 1.24.0
 golang.org/x/image/colornames
-# golang.org/x/sys v0.26.0
-## explicit; go 1.18
+# golang.org/x/sys v0.41.0
+## explicit; go 1.24.0
 golang.org/x/sys/cpu
 golang.org/x/sys/windows

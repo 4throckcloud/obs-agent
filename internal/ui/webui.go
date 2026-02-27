@@ -42,9 +42,9 @@ type WizardConfig struct {
 }
 
 // WizardResult holds the values collected by the setup wizard.
+// OBSHost is not included — it is hardcoded in the binary.
 type WizardResult struct {
 	Token   string
-	OBSHost string
 	OBSPort int
 	OBSPass string
 	Saved   bool
@@ -131,7 +131,6 @@ func (w *WebUI) runWizard(mode string, cfg WizardConfig) (*WizardResult, error) 
 	w.mode = mode
 	w.wizCfg = cfg
 	w.result = &WizardResult{
-		OBSHost: cfg.DefaultHost,
 		OBSPort: cfg.DefaultPort,
 		Token:   cfg.ExistingToken,
 	}
@@ -355,17 +354,13 @@ func (w *WebUI) handleOBS(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	host := strings.TrimSpace(req.Host)
-	if host == "" {
-		host = "localhost"
-	}
+	// OBS host is hardcoded — ignore whatever the wizard sends
 	port := req.Port
 	if port <= 0 || port > 65535 {
 		port = 4455
 	}
 
 	w.mu.Lock()
-	w.result.OBSHost = host
 	w.result.OBSPort = port
 	w.result.OBSPass = req.Password
 	w.mu.Unlock()
@@ -388,16 +383,13 @@ func (w *WebUI) handleTestOBS(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	host := strings.TrimSpace(req.Host)
-	if host == "" {
-		host = "localhost"
-	}
+	// OBS host is hardcoded — use the configured default, ignore client value
 	port := req.Port
 	if port <= 0 || port > 65535 {
 		port = 4455
 	}
 
-	addr := fmt.Sprintf("ws://%s:%d", host, port)
+	addr := fmt.Sprintf("ws://%s:%d", w.wizCfg.DefaultHost, port)
 	dialer := &websocket.Dialer{HandshakeTimeout: 3 * time.Second}
 	ws, _, err := dialer.Dial(addr, nil)
 	if err != nil {
@@ -447,7 +439,7 @@ func (w *WebUI) handleSave(rw http.ResponseWriter, r *http.Request) {
 	cfg := &agent.Config{
 		RelayURL: relayURL,
 		Token:    result.Token,
-		OBSHost:  result.OBSHost,
+		OBSHost:  w.wizCfg.DefaultHost,
 		OBSPort:  result.OBSPort,
 		OBSPass:  result.OBSPass,
 	}

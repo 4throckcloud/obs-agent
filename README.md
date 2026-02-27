@@ -15,12 +15,14 @@ The agent maintains a persistent WebSocket tunnel to the relay server with signe
 
 ## Download
 
+**Latest:** v2.21.0
+
 | Platform | Download |
 |----------|----------|
-| Windows | [obs-agent-windows-amd64.exe](https://media.4throck.cloud/agent/latest/obs-agent-windows-amd64-v2.21.0.exe) |
-| macOS Intel | [obs-agent-mac-intel](https://media.4throck.cloud/agent/latest/obs-agent-mac-intel-v2.21.0) |
-| macOS Apple Silicon | [obs-agent-mac-apple](https://media.4throck.cloud/agent/latest/obs-agent-mac-apple-v2.21.0) |
-| Linux | [obs-agent-linux-amd64](https://media.4throck.cloud/agent/latest/obs-agent-linux-amd64-v2.21.0) |
+| Windows | [obs-agent-windows-amd64.zip](https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-windows-amd64.zip) |
+| macOS Intel | [obs-agent-mac-intel.zip](https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-mac-intel.zip) |
+| macOS Apple Silicon | [obs-agent-mac-apple.zip](https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-mac-apple.zip) |
+| Linux | [obs-agent-linux-amd64.zip](https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-linux-amd64.zip) |
 
 Latest version and checksums: [`manifest.json`](https://media.4throck.cloud/agent/manifest.json)
 
@@ -28,9 +30,10 @@ Latest version and checksums: [`manifest.json`](https://media.4throck.cloud/agen
 
 ```bash
 # Download (replace URL with your platform)
-curl -Lo obs-agent https://media.4throck.cloud/agent/latest/obs-agent-linux-amd64-v2.21.0
-chmod +x obs-agent
-./obs-agent
+curl -Lo obs-agent.zip https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-linux-amd64.zip
+unzip obs-agent.zip
+chmod +x obs-agent-linux-amd64
+./obs-agent-linux-amd64
 ```
 
 ### Docker

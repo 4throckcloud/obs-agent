@@ -22,7 +22,7 @@ DOCKER_IMAGE := ghcr.io/4throckcloud/obs-agent
 
 .PHONY: build-all build-windows build-mac-intel build-mac-arm build-linux build-docker push-docker clean
 
-build-all: build-windows build-mac-intel build-mac-arm build-linux
+build-all: build-windows build-mac-intel build-mac-arm build-linux build-linux-arm64
 	@echo "All builds complete in dist/"
 	@ls -lh $(ROOT)/dist/
 
@@ -47,6 +47,10 @@ build-mac-arm:
 build-linux:
 	@echo "Building Linux amd64..."
 	cd $(ROOT) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=mod -ldflags="$(LDFLAGS)" -o dist/obs-agent-linux-amd64 ./cmd/agent
+
+build-linux-arm64:
+	@echo "Building Linux arm64..."
+	cd $(ROOT) && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -mod=mod -ldflags="$(LDFLAGS)" -o dist/obs-agent-linux-arm64 ./cmd/agent
 
 build-docker:
 	@test -f $(ROOT)/dist/obs-agent-linux-amd64 || (echo "ERROR: dist/obs-agent-linux-amd64 not found — run build-linux first" && exit 1)

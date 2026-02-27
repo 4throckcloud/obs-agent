@@ -216,19 +216,18 @@ ENDJSON
     echo "→ Uploading staging manifest to R2..."
     r2_upload "$DIST_DIR/manifest-staging.json" "agent/manifest-staging.json" "application/json"
 
-    # Docker image build + push
-    echo "→ Building Docker image..."
+    # Docker multi-arch image build + push
+    echo "→ Building Docker image (amd64 + arm64)..."
     cp "$DIST_DIR/obs-agent-linux-amd64" "$SCRIPT_DIR/obs-agent-linux-amd64"
-    docker build \
+    cp "$DIST_DIR/obs-agent-linux-arm64" "$SCRIPT_DIR/obs-agent-linux-arm64"
+    docker buildx build \
+        --platform linux/amd64,linux/arm64 \
         --build-arg VERSION="v${version}" \
         -t "${DOCKER_IMAGE}:v${version}" \
         -t "${DOCKER_IMAGE}:staging" \
+        --push \
         "$SCRIPT_DIR"
-    rm -f "$SCRIPT_DIR/obs-agent-linux-amd64"
-
-    echo "→ Pushing Docker image to GHCR..."
-    docker push "${DOCKER_IMAGE}:v${version}"
-    docker push "${DOCKER_IMAGE}:staging"
+    rm -f "$SCRIPT_DIR/obs-agent-linux-amd64" "$SCRIPT_DIR/obs-agent-linux-arm64"
 
     echo ""
     echo "═══════════════════════════════════════════════════════════"
@@ -319,11 +318,18 @@ ENDJSON
     r2_upload "$tmpfile" "agent/manifest.json" "application/json"
     rm -f "$tmpfile"
 
-    # Docker: tag as :latest and push
-    echo "→ Tagging Docker image as :latest..."
-    docker tag "${DOCKER_IMAGE}:v${version}" "${DOCKER_IMAGE}:latest"
-    echo "→ Pushing :latest to GHCR..."
-    docker push "${DOCKER_IMAGE}:latest"
+    # Docker: rebuild with :latest tag (multi-arch)
+    echo "→ Building Docker :latest (amd64 + arm64)..."
+    cp "$DIST_DIR/obs-agent-linux-amd64" "$SCRIPT_DIR/obs-agent-linux-amd64"
+    cp "$DIST_DIR/obs-agent-linux-arm64" "$SCRIPT_DIR/obs-agent-linux-arm64"
+    docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        --build-arg VERSION="v${version}" \
+        -t "${DOCKER_IMAGE}:v${version}" \
+        -t "${DOCKER_IMAGE}:latest" \
+        --push \
+        "$SCRIPT_DIR"
+    rm -f "$SCRIPT_DIR/obs-agent-linux-amd64" "$SCRIPT_DIR/obs-agent-linux-arm64"
 
     # Update README version badge
     local readme="$AGENT_DIR/README.md"

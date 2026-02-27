@@ -11,10 +11,7 @@ RUN apk add --no-cache ca-certificates
 COPY obs-agent-linux-amd64 /usr/local/bin/obs-agent
 RUN chmod +x /usr/local/bin/obs-agent
 
-ENV RELAY_URL="" \
-    TOKEN="" \
-    OBS_HOST="host.docker.internal" \
-    OBS_PORT="4455" \
+ENV TOKEN="" \
     OBS_PASS=""
 
 COPY entrypoint.sh /entrypoint.sh

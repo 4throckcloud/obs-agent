@@ -41,8 +41,10 @@ var tokenRegex = regexp.MustCompile(`^[0-9a-f]{64}$`)
 var wizard ui.UI
 
 func main() {
+	// Relay URL is hardcoded — not configurable by users
+	const relayURL = "wss://4throck.cloud/ws/agent"
+
 	var (
-		relayURL       string
 		token          string
 		obsHost        string
 		obsPort        int
@@ -56,7 +58,6 @@ func main() {
 		uninstallSvc   bool
 	)
 
-	flag.StringVar(&relayURL, "relay", "wss://4throck.cloud/ws/agent", "Relay server URL")
 	flag.StringVar(&token, "token", "", "Agent authentication token")
 	flag.StringVar(&obsHost, "obs-host", "localhost", "Local OBS WebSocket host")
 	flag.IntVar(&obsPort, "obs-port", 4455, "Local OBS WebSocket port")

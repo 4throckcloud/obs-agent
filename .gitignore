@@ -1,4 +1,6 @@
 dist/
 *.dat
 *.exe
+/agent
 build/obs-agent-linux-amd64
+build/obs-agent-linux-arm64

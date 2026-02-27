@@ -217,9 +217,20 @@ func main() {
 		webUI.SetStatusServer(statusSrv)
 	}
 
-	// 13. If no token: run wizard; -setup flag forces re-setup
+	// 13. If no token: run wizard (interactive) or fail fast (headless/Docker)
 	var wizardRan bool
 	if cfg.Token == "" || setup {
+		if !ui.IsGuiAvailable() && !isTerminal() && !setup {
+			// Headless mode (Docker, service) — no wizard possible
+			statusSrv.Stop()
+			lock.Release()
+			fmt.Fprintln(os.Stderr, "ERROR: TOKEN is required.")
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "  1. Go to your 4thRock dashboard → OBS Control → Add Agent")
+			fmt.Fprintln(os.Stderr, "  2. Copy the token")
+			fmt.Fprintln(os.Stderr, "  3. Run: docker run -d -e TOKEN=<your-token> ghcr.io/4throckcloud/obs-agent:latest")
+			os.Exit(1)
+		}
 		wizardRan = true
 		detected := autoDetectOBS()
 		runWizardSetup(wizard, cfg, defaultConfigPath, detected, setup)
@@ -576,6 +587,15 @@ func isFlagSet(name string) bool {
 		}
 	})
 	return found
+}
+
+// isTerminal returns true if stdin is attached to a terminal (not Docker detached / piped).
+func isTerminal() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 // binaryDirectory returns the directory containing the running binary.

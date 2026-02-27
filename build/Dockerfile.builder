@@ -1,4 +1,4 @@
-FROM golang:1.22-bookworm
+FROM golang:1.24-bookworm
 
 # Cross-compile dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

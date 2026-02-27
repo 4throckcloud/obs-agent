@@ -27,9 +27,9 @@ type Config struct {
 
 // configData is the internal structure encrypted on disk.
 // Never visible as JSON to users — the file is an opaque binary blob.
+// OBSHost and RelayURL are NOT stored — they are hardcoded in the binary.
 type configData struct {
 	Token   string `json:"token"`
-	OBSHost string `json:"obs_host"`
 	OBSPort int    `json:"obs_port"`
 	OBSPass string `json:"obs_pass,omitempty"`
 }
@@ -91,7 +91,6 @@ func loadEncrypted(data []byte) (*Config, error) {
 
 	return &Config{
 		Token:   cd.Token,
-		OBSHost: cd.OBSHost,
 		OBSPort: cd.OBSPort,
 		OBSPass: cd.OBSPass,
 	}, nil
@@ -105,7 +104,6 @@ func loadLegacy(data []byte) (*Config, error) {
 
 	cfg := &Config{
 		Token:   lf.Token,
-		OBSHost: lf.OBSHost,
 		OBSPort: lf.OBSPort,
 	}
 
@@ -127,7 +125,6 @@ func loadLegacy(data []byte) (*Config, error) {
 func SaveConfig(path string, cfg *Config) error {
 	cd := configData{
 		Token:   cfg.Token,
-		OBSHost: cfg.OBSHost,
 		OBSPort: cfg.OBSPort,
 		OBSPass: cfg.OBSPass,
 	}

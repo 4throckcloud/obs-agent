@@ -41,6 +41,8 @@ chmod +x obs-agent-linux-amd64
 ```bash
 docker run -d --name obs-agent \
   -e TOKEN=your-agent-token \
+  -e OBS_PASS=your-obs-password \
+  -e OBS_PORT=4455 \
   ghcr.io/4throckcloud/obs-agent:latest
 ```
 
@@ -107,7 +109,7 @@ Install as a startup service so the agent runs automatically:
 
 ## Building from Source
 
-Requires Go 1.22+.
+Requires Go 1.24+.
 
 ```bash
 # Single platform

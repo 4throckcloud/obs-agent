@@ -4,22 +4,23 @@ set -euo pipefail
 # ─── OBS Agent Release Script ─────────────────────────────────────────────────
 #
 # Usage:
-#   ./release.sh 1.0.0              Build + upload to staging
-#   ./release.sh 1.0.0 --promote    Upload local dist/ → stable (users see it now)
+#   ./release.sh 1.0.0              Build + upload to staging (GitHub prerelease)
+#   ./release.sh 1.0.0 --promote    Promote to stable (GitHub latest release)
 #
-# R2 layout:
-#   agent/manifest.json             ← stable manifest (has download_url per build)
+# R2 layout (manifests only):
+#   agent/manifest.json             ← stable manifest
 #   agent/manifest-staging.json     ← staging manifest
-#   agent/v1.0.0/                   ← versioned binaries
-#   agent/latest/                   ← stable copies (versioned filenames for CDN cache busting)
-#   agent/staging/                  ← staging copies
+#
+# GitHub Releases (4throckcloud/obs-agent):
+#   vX.Y.Z prerelease → promoted to latest on --promote
+#   Assets: obs-agent-{platform}.zip
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 OBS_STACK_DIR="$(cd "$AGENT_DIR/.." && pwd)"
 DIST_DIR="$AGENT_DIR/dist"
 
-# R2 config
+# R2 config (manifests only)
 R2_ACCOUNT_ID="f4c0a9e2ce9585ee94c49de7c493f278"
 R2_BUCKET="4throck"
 R2_PUBLIC_URL="https://media.4throck.cloud"
@@ -28,6 +29,10 @@ R2_BASE="https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT_ID}/r2/bucke
 
 # Docker / GHCR config
 DOCKER_IMAGE="ghcr.io/4throckcloud/obs-agent"
+
+# GitHub config
+GH_REPO="4throckcloud/obs-agent"
+GH_TOKEN_FILE="/home/ubuntu/production/obs-stack/secrets/ghcr_token"
 
 # Binary definitions: name os arch
 BUILDS=(
@@ -59,13 +64,20 @@ load_r2_token() {
     [[ -n "$R2_TOKEN" ]] || die "R2 token is empty"
 }
 
-# Versioned filename: obs-agent-windows-amd64.exe → obs-agent-windows-amd64-v1.3.0.exe
-versioned_name() {
-    local filename="$1" version="$2"
+load_gh_token() {
+    [[ -f "$GH_TOKEN_FILE" ]] || die "GitHub token file not found: $GH_TOKEN_FILE"
+    export GH_TOKEN
+    GH_TOKEN="$(cat "$GH_TOKEN_FILE" | tr -d '[:space:]')"
+    [[ -n "$GH_TOKEN" ]] || die "GitHub token is empty"
+}
+
+# Zip name: obs-agent-windows-amd64.exe → obs-agent-windows-amd64.zip
+zip_name() {
+    local filename="$1"
     if [[ "$filename" == *.exe ]]; then
-        echo "${filename%.exe}-v${version}.exe"
+        echo "${filename%.exe}.zip"
     else
-        echo "${filename}-v${version}"
+        echo "${filename}.zip"
     fi
 }
 
@@ -89,18 +101,6 @@ r2_upload() {
         echo "  ✓ $key (${size} bytes)"
     else
         die "R2 upload failed for $key (HTTP $http_code): $body"
-    fi
-}
-
-r2_verify_public() {
-    local url="$1" expected_size="$2"
-    local actual_size
-    actual_size=$(curl -sI "$url" 2>/dev/null | grep -i content-length | awk '{print $2}' | tr -d '\r')
-    if [[ "$actual_size" == "$expected_size" ]]; then
-        echo "  ✓ Verified: $url (${actual_size} bytes)"
-    else
-        echo "  ✗ MISMATCH: $url (expected ${expected_size}, got ${actual_size:-empty})"
-        return 1
     fi
 }
 
@@ -138,6 +138,29 @@ do_build() {
         upx --best "$DIST_DIR/$filename" 2>/dev/null || echo "  (UPX skipped for $filename)"
     done
 
+    # Zip binaries for GitHub Release
+    echo "→ Zipping binaries..."
+    local zip_assets=()
+    for entry in "${BUILDS[@]}"; do
+        read -r filename _ _ <<< "$entry"
+        local zname
+        zname=$(zip_name "$filename")
+        (cd "$DIST_DIR" && zip -j "$zname" "$filename")
+        zip_assets+=("$DIST_DIR/$zname")
+        echo "  ✓ $zname"
+    done
+
+    # Create GitHub prerelease with zip assets
+    load_gh_token
+    echo "→ Creating GitHub prerelease v${version}..."
+    gh release create "v${version}" \
+        --repo "$GH_REPO" \
+        --prerelease \
+        --title "v${version}" \
+        --notes "Staging release v${version}" \
+        "${zip_assets[@]}"
+    echo "  ✓ GitHub prerelease created"
+
     # Generate manifest with checksums + download URLs
     echo "→ Generating manifest..."
     local manifest_builds="["
@@ -150,9 +173,9 @@ do_build() {
         local size
         size=$(stat -c%s "$filepath")
         local platform="${PLATFORM_LABELS[$filename]}"
-        local vname
-        vname=$(versioned_name "$filename" "$version")
-        local dl_url="${R2_PUBLIC_URL}/agent/latest/${vname}"
+        local zname
+        zname=$(zip_name "$filename")
+        local dl_url="https://github.com/${GH_REPO}/releases/download/v${version}/${zname}"
 
         echo "  $filename: sha256=$sha256 size=$size"
 
@@ -188,16 +211,9 @@ ENDJSON
 )
     echo "$manifest" > "$DIST_DIR/manifest-staging.json"
 
-    # Upload to R2
+    # Upload staging manifest to R2
     load_r2_token
-    echo "→ Uploading to R2..."
-
-    for entry in "${BUILDS[@]}"; do
-        read -r filename _ _ <<< "$entry"
-        r2_upload "$DIST_DIR/$filename" "agent/v${version}/$filename"
-        r2_upload "$DIST_DIR/$filename" "agent/staging/$filename"
-    done
-
+    echo "→ Uploading staging manifest to R2..."
     r2_upload "$DIST_DIR/manifest-staging.json" "agent/manifest-staging.json" "application/json"
 
     # Docker image build + push
@@ -217,7 +233,7 @@ ENDJSON
     echo ""
     echo "═══════════════════════════════════════════════════════════"
     echo "  Staging complete! v${version}"
-    echo "  Download: ${R2_PUBLIC_URL}/agent/staging/"
+    echo "  GitHub:   https://github.com/${GH_REPO}/releases/tag/v${version} (prerelease)"
     echo "  Manifest: ${R2_PUBLIC_URL}/agent/manifest-staging.json"
     echo "  Docker:   ${DOCKER_IMAGE}:v${version} / :staging"
     echo ""
@@ -226,7 +242,7 @@ ENDJSON
     echo "═══════════════════════════════════════════════════════════"
 }
 
-# ─── Promote Local Dist → Stable ─────────────────────────────────────────────
+# ─── Promote → Stable ─────────────────────────────────────────────────────────
 
 do_promote() {
     local version="$1"
@@ -234,25 +250,24 @@ do_promote() {
     echo "  Promoting v${version} to stable"
     echo "═══════════════════════════════════════════════════════════"
 
-    # Verify local dist exists (upload from local, not r2_copy — avoids CDN staleness)
+    # Verify local dist exists (needed for manifest checksums)
     for entry in "${BUILDS[@]}"; do
         read -r filename _ _ <<< "$entry"
         [[ -f "$DIST_DIR/$filename" ]] || die "Local build missing: $DIST_DIR/$filename (re-run build first)"
     done
     echo "  Local dist/ verified"
 
-    load_r2_token
-
-    # Upload from local dist → latest/ with versioned filenames
-    echo "→ Uploading versioned binaries to latest/..."
-    for entry in "${BUILDS[@]}"; do
-        read -r filename _ _ <<< "$entry"
-        local vname
-        vname=$(versioned_name "$filename" "$version")
-        r2_upload "$DIST_DIR/$filename" "agent/latest/$vname"
-    done
+    # Promote GitHub prerelease → latest release
+    load_gh_token
+    echo "→ Promoting GitHub release v${version} to latest..."
+    gh release edit "v${version}" \
+        --repo "$GH_REPO" \
+        --prerelease=false \
+        --latest
+    echo "  ✓ GitHub release marked as latest"
 
     # Generate and upload stable manifest
+    load_r2_token
     echo "→ Generating stable manifest..."
     local manifest_builds="["
     local first=true
@@ -264,9 +279,9 @@ do_promote() {
         local size
         size=$(stat -c%s "$filepath")
         local platform="${PLATFORM_LABELS[$filename]}"
-        local vname
-        vname=$(versioned_name "$filename" "$version")
-        local dl_url="${R2_PUBLIC_URL}/agent/latest/${vname}"
+        local zname
+        zname=$(zip_name "$filename")
+        local dl_url="https://github.com/${GH_REPO}/releases/download/v${version}/${zname}"
 
         $first || manifest_builds+=","
         first=false
@@ -310,44 +325,28 @@ ENDJSON
     echo "→ Pushing :latest to GHCR..."
     docker push "${DOCKER_IMAGE}:latest"
 
-    # Verify public URLs actually serve the right files
-    echo "→ Verifying public downloads..."
-    sleep 2  # Brief pause for R2 propagation
-    local verify_ok=true
-    for entry in "${BUILDS[@]}"; do
-        read -r filename _ _ <<< "$entry"
-        local vname
-        vname=$(versioned_name "$filename" "$version")
-        local expected_size
-        expected_size=$(stat -c%s "$DIST_DIR/$filename")
-        r2_verify_public "${R2_PUBLIC_URL}/agent/latest/${vname}" "$expected_size" || verify_ok=false
-    done
-
-    # Update README download links with new version
+    # Update README version badge
     local readme="$AGENT_DIR/README.md"
     if [[ -f "$readme" ]]; then
-        echo "→ Updating README.md download links..."
-        sed -i -E "s|agent/latest/obs-agent-([a-z0-9_-]+)-v[0-9]+\.[0-9]+\.[0-9]+|agent/latest/obs-agent-\1-v${version}|g" "$readme"
-        if git -C "$AGENT_DIR" diff --quiet "$readme" 2>/dev/null; then
+        echo "→ Updating README.md version..."
+        sed -i -E "s/^\*\*Latest:\*\* v[0-9]+\.[0-9]+\.[0-9]+/**Latest:** v${version}/" "$readme"
+        if git -C "$OBS_STACK_DIR" diff --quiet "$readme" 2>/dev/null; then
             echo "  (no changes needed)"
         else
             echo "  ✓ README updated to v${version}"
+            git -C "$OBS_STACK_DIR" add "$readme"
+            git -C "$OBS_STACK_DIR" commit -m "Release v${version}"
+            git -C "$OBS_STACK_DIR" push
+            echo "  ✓ Committed and pushed"
         fi
     fi
 
     echo ""
     echo "═══════════════════════════════════════════════════════════"
-    if $verify_ok; then
-        echo "  ✓ Promoted v${version} to STABLE — all downloads verified"
-    else
-        echo "  ⚠ Promoted v${version} to STABLE — some downloads may be cached"
-        echo "  CDN may take a few minutes to serve new files"
-    fi
-    echo "  Manifest:  ${R2_PUBLIC_URL}/agent/manifest.json"
-    echo "  Docker:    ${DOCKER_IMAGE}:latest"
-    echo ""
-    echo "  README updated — commit & push to sync public repo:"
-    echo "    git add obs-stack/agent/README.md && git commit -m 'Release v${version}' && git push"
+    echo "  ✓ Promoted v${version} to STABLE"
+    echo "  GitHub:   https://github.com/${GH_REPO}/releases/tag/v${version}"
+    echo "  Manifest: ${R2_PUBLIC_URL}/agent/manifest.json"
+    echo "  Docker:   ${DOCKER_IMAGE}:latest"
     echo "═══════════════════════════════════════════════════════════"
 }
 

@@ -17,8 +17,9 @@ const PORT = 8770;
 const HOST = '0.0.0.0';  // Docker containers access via gateway; auth via API key
 const RELEASE_SCRIPT = path.join(__dirname, 'release.sh');
 const API_KEY_FILE = '/home/ubuntu/production/obs-stack/secrets/internal_api_key.txt';
-const MANIFEST_URL = 'https://media.4throck.cloud/agent/manifest.json';
-const STAGING_MANIFEST_URL = 'https://media.4throck.cloud/agent/manifest-staging.json';
+const MANIFEST_URL = 'https://github.com/4throckcloud/obs-agent/releases/latest/download/manifest.json';
+const GH_REPO = '4throckcloud/obs-agent';
+const GH_TOKEN_FILE = '/home/ubuntu/production/obs-stack/secrets/ghcr_token';
 
 // Load API key for auth
 let API_KEY = '';
@@ -103,12 +104,38 @@ function runRelease(version, promote) {
     });
 }
 
-// Fetch manifest from R2
+// Load GH token for API calls
+let GH_TOKEN = '';
+try { GH_TOKEN = fs.readFileSync(GH_TOKEN_FILE, 'utf8').trim(); } catch (e) { /* optional */ }
+
+// Fetch manifest from GitHub Release
 async function fetchManifest(url) {
     try {
-        const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        const headers = { 'Accept': 'application/octet-stream' };
+        if (GH_TOKEN) headers['Authorization'] = `token ${GH_TOKEN}`;
+        const resp = await fetch(url, { signal: AbortSignal.timeout(10000), headers });
         if (!resp.ok) return null;
         return await resp.json();
+    } catch (e) {
+        return null;
+    }
+}
+
+// Find latest prerelease manifest via GitHub API
+async function fetchStagingManifest() {
+    try {
+        const headers = { 'Accept': 'application/vnd.github+json' };
+        if (GH_TOKEN) headers['Authorization'] = `token ${GH_TOKEN}`;
+        const resp = await fetch(`https://api.github.com/repos/${GH_REPO}/releases`, {
+            signal: AbortSignal.timeout(10000), headers
+        });
+        if (!resp.ok) return null;
+        const releases = await resp.json();
+        const prerelease = releases.find(r => r.prerelease);
+        if (!prerelease) return null;
+        const asset = prerelease.assets.find(a => a.name === 'manifest.json');
+        if (!asset) return null;
+        return await fetchManifest(asset.browser_download_url);
     } catch (e) {
         return null;
     }
@@ -136,7 +163,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/status') {
         const [stable, staging] = await Promise.all([
             fetchManifest(MANIFEST_URL),
-            fetchManifest(STAGING_MANIFEST_URL)
+            fetchStagingManifest()
         ]);
         return sendJson(res, 200, {
             stable: stable || null,

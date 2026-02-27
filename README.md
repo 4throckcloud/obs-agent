@@ -24,7 +24,7 @@ The agent maintains a persistent WebSocket tunnel to the relay server with signe
 | macOS Apple Silicon | [obs-agent-mac-apple.zip](https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-mac-apple.zip) |
 | Linux | [obs-agent-linux-amd64.zip](https://github.com/4throckcloud/obs-agent/releases/latest/download/obs-agent-linux-amd64.zip) |
 
-Latest version and checksums: [`manifest.json`](https://media.4throck.cloud/agent/manifest.json)
+Latest version and checksums: [`manifest.json`](https://github.com/4throckcloud/obs-agent/releases/latest/download/manifest.json)
 
 ### macOS / Linux
 

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const DefaultManifestURL = "https://media.4throck.cloud/agent/manifest.json"
+const DefaultManifestURL = "https://github.com/4throckcloud/obs-agent/releases/latest/download/manifest.json"
 
 // Result holds the outcome of an integrity verification.
 type Result struct {

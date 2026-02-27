@@ -15,7 +15,7 @@ The agent maintains a persistent WebSocket tunnel to the relay server with signe
 
 ## Download
 
-**Latest:** v2.24.0
+**Latest:** v2.25.0
 
 | Platform | Download |
 |----------|----------|

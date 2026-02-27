@@ -13,7 +13,9 @@ COPY obs-agent-linux-${TARGETARCH} /usr/local/bin/obs-agent
 RUN chmod +x /usr/local/bin/obs-agent
 
 ENV TOKEN="" \
-    OBS_PASS=""
+    OBS_PASS="" \
+    OBS_PORT="" \
+    OBS_HOST="host.docker.internal"
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

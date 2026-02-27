@@ -15,7 +15,7 @@ The agent maintains a persistent WebSocket tunnel to the relay server with signe
 
 ## Download
 
-**Latest:** v2.21.0
+**Latest:** v2.22.0
 
 | Platform | Download |
 |----------|----------|
@@ -62,7 +62,6 @@ obs-agent [flags]
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-token` | Agent authentication token | _(from config)_ |
-| `-obs-host` | OBS WebSocket host | `localhost` |
 | `-obs-port` | OBS WebSocket port | `4455` |
 | `-obs-pass` | OBS WebSocket password | _(empty)_ |
 | `-setup` | Re-run the setup wizard | |

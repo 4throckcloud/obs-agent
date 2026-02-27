@@ -44,11 +44,16 @@ func main() {
 	// Relay URL is hardcoded — not configurable by users
 	const relayURL = "wss://4throck.cloud/ws/agent"
 
+	// OBS host defaults to localhost; Docker sets OBS_HOST=host.docker.internal
+	obsHost := "localhost"
+	if h := os.Getenv("OBS_HOST"); h != "" {
+		obsHost = h
+	}
+
 	var (
-		token          string
-		obsHost        string
-		obsPort        int
-		obsPass        string
+		token   string
+		obsPort int
+		obsPass string
 		configFile     string
 		showVersion    bool
 		setup          bool
@@ -59,7 +64,6 @@ func main() {
 	)
 
 	flag.StringVar(&token, "token", "", "Agent authentication token")
-	flag.StringVar(&obsHost, "obs-host", "localhost", "Local OBS WebSocket host")
 	flag.IntVar(&obsPort, "obs-port", 4455, "Local OBS WebSocket port")
 	flag.StringVar(&obsPass, "obs-pass", "", "Local OBS WebSocket password")
 	flag.StringVar(&configFile, "config", "", "Config file path (optional, overrides flags)")
@@ -176,12 +180,9 @@ func main() {
 			// Default config not found is fine — will prompt for setup
 		} else {
 			configLoaded = true
-			// relay_url is never loaded from config — hardcoded in binary
+			// relay_url and obs_host are never loaded from config — hardcoded in binary
 			if !isFlagSet("token") && loaded.Token != "" {
 				cfg.Token = loaded.Token
-			}
-			if !isFlagSet("obs-host") && loaded.OBSHost != "" {
-				cfg.OBSHost = loaded.OBSHost
 			}
 			if !isFlagSet("obs-port") && loaded.OBSPort != 0 {
 				cfg.OBSPort = loaded.OBSPort

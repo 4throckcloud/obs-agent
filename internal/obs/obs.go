@@ -27,13 +27,11 @@ func Connect(ctx context.Context, addr, password string) (*websocket.Conn, error
 
 	conn.SetReadLimit(1 * 1024 * 1024) // 1MB
 
-	// OBS WebSocket v5 sends Hello (op 0) on connect
-	// If password is required, we need to authenticate
-	if password != "" {
-		if err := authenticate(conn, password); err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("OBS auth failed: %w", err)
-		}
+	// OBS WebSocket v5 always requires Hello/Identify handshake,
+	// even without a password (Identify still must be sent)
+	if err := authenticate(conn, password); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("OBS auth failed: %w", err)
 	}
 
 	// Set initial read deadline — bridge resets on each successful read
@@ -58,11 +56,9 @@ func ConnectMonitor(ctx context.Context, addr, password string) (*websocket.Conn
 
 	conn.SetReadLimit(1 * 1024 * 1024) // 1MB
 
-	if password != "" {
-		if err := authenticateMonitor(conn, password); err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("OBS monitor auth failed: %w", err)
-		}
+	if err := authenticateMonitor(conn, password); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("OBS monitor auth failed: %w", err)
 	}
 
 	conn.SetReadDeadline(time.Now().Add(OBSReadTimeout))

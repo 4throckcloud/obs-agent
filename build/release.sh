@@ -323,6 +323,18 @@ ENDJSON
         r2_verify_public "${R2_PUBLIC_URL}/agent/latest/${vname}" "$expected_size" || verify_ok=false
     done
 
+    # Update README download links with new version
+    local readme="$AGENT_DIR/README.md"
+    if [[ -f "$readme" ]]; then
+        echo "→ Updating README.md download links..."
+        sed -i -E "s|agent/latest/obs-agent-([a-z0-9_-]+)-v[0-9]+\.[0-9]+\.[0-9]+|agent/latest/obs-agent-\1-v${version}|g" "$readme"
+        if git -C "$AGENT_DIR" diff --quiet "$readme" 2>/dev/null; then
+            echo "  (no changes needed)"
+        else
+            echo "  ✓ README updated to v${version}"
+        fi
+    fi
+
     echo ""
     echo "═══════════════════════════════════════════════════════════"
     if $verify_ok; then
@@ -333,6 +345,9 @@ ENDJSON
     fi
     echo "  Manifest:  ${R2_PUBLIC_URL}/agent/manifest.json"
     echo "  Docker:    ${DOCKER_IMAGE}:latest"
+    echo ""
+    echo "  README updated — commit & push to sync public repo:"
+    echo "    git add obs-stack/agent/README.md && git commit -m 'Release v${version}' && git push"
     echo "═══════════════════════════════════════════════════════════"
 }
 

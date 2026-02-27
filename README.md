@@ -40,10 +40,7 @@ chmod +x obs-agent-linux-amd64
 
 ```bash
 docker run -d --name obs-agent \
-  -e RELAY_URL=wss://4throck.cloud/ws/agent \
   -e TOKEN=your-agent-token \
-  -e OBS_HOST=host.docker.internal \
-  -e OBS_PORT=4455 \
   ghcr.io/4throckcloud/obs-agent:latest
 ```
 

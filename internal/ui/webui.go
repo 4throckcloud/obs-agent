@@ -247,12 +247,7 @@ func (w *WebUI) handleName(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Open verification URL in a new tab
-	if err := device.OpenBrowser(code.VerificationURL); err != nil {
-		log.Printf("[wizard] Could not open verification URL: %v", err)
-	}
-
-	// Start background polling
+	// Start background polling (no browser redirect — user pastes token from dashboard)
 	pollCtx, cancel := context.WithCancel(context.Background())
 	w.mu.Lock()
 	w.pollCancel = cancel

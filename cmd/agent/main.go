@@ -493,12 +493,9 @@ func runWizardSetup(w ui.UI, cfg *agent.Config, savePath string, detected *obsDe
 		var result *ui.WizardResult
 		var err error
 
-		if cfg.Token == "" && forceSetup {
-			// -setup flag: manual token entry
+		if cfg.Token == "" {
+			// No token: manual token entry (paste from dashboard)
 			result, err = runner.RunManualWizard(wizCfg)
-		} else if cfg.Token == "" {
-			// No token: device auth flow
-			result, err = runner.RunDeviceWizard(wizCfg)
 		} else {
 			// Has token, -setup flag: OBS-only reconfigure
 			wizCfg.ExistingToken = cfg.Token
@@ -516,16 +513,8 @@ func runWizardSetup(w ui.UI, cfg *agent.Config, savePath string, detected *obsDe
 		return
 	}
 
-	// CLI fallback — existing dialog-based flow
-	if cfg.Token == "" && forceSetup {
-		runSetup(w, cfg, savePath, detected)
-	} else if cfg.Token == "" {
-		if err := runDeviceAuth(w, cfg, savePath, detected); err != nil {
-			fatalWait(fmt.Sprintf("[agent] Device authorization failed: %v\nRun with -setup flag for manual token entry.", err))
-		}
-	} else {
-		runSetup(w, cfg, savePath, detected)
-	}
+	// CLI fallback — manual token entry
+	runSetup(w, cfg, savePath, detected)
 }
 
 // runVerify performs a verbose integrity check and exits.

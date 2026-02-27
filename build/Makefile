@@ -18,7 +18,9 @@ ifeq ($(VER_PATCH),)
 VER_PATCH := 0
 endif
 
-.PHONY: build-all build-windows build-mac-intel build-mac-arm build-linux clean
+DOCKER_IMAGE := ghcr.io/4throckcloud/obs-agent
+
+.PHONY: build-all build-windows build-mac-intel build-mac-arm build-linux build-docker push-docker clean
 
 build-all: build-windows build-mac-intel build-mac-arm build-linux
 	@echo "All builds complete in dist/"
@@ -45,6 +47,21 @@ build-mac-arm:
 build-linux:
 	@echo "Building Linux amd64..."
 	cd $(ROOT) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=mod -ldflags="$(LDFLAGS)" -o dist/obs-agent-linux-amd64 ./cmd/agent
+
+build-docker:
+	@test -f $(ROOT)/dist/obs-agent-linux-amd64 || (echo "ERROR: dist/obs-agent-linux-amd64 not found — run build-linux first" && exit 1)
+	@echo "Building Docker image $(DOCKER_IMAGE):$(VERSION)..."
+	cp $(ROOT)/dist/obs-agent-linux-amd64 $(dir $(abspath $(lastword $(MAKEFILE_LIST))))obs-agent-linux-amd64
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		-t $(DOCKER_IMAGE):$(VERSION) \
+		-t $(DOCKER_IMAGE):staging \
+		$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+	rm -f $(dir $(abspath $(lastword $(MAKEFILE_LIST))))obs-agent-linux-amd64
+
+push-docker:
+	@echo "Pushing $(DOCKER_IMAGE) tags to GHCR..."
+	docker push $(DOCKER_IMAGE) --all-tags
 
 clean:
 	rm -rf $(ROOT)/dist/

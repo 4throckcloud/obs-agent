@@ -26,6 +26,9 @@ R2_PUBLIC_URL="https://media.4throck.cloud"
 R2_TOKEN_FILE="/home/ubuntu/production/widgets-stack/secrets/r2_api_token"
 R2_BASE="https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT_ID}/r2/buckets/${R2_BUCKET}/objects"
 
+# Docker / GHCR config
+DOCKER_IMAGE="ghcr.io/4throckcloud/obs-agent"
+
 # Binary definitions: name os arch
 BUILDS=(
     "obs-agent-windows-amd64.exe windows amd64"
@@ -178,6 +181,7 @@ ENDJSON
   "version": "v${version}",
   "channel": "staging",
   "released_at": "$released_at",
+  "docker": "${DOCKER_IMAGE}:v${version}",
   "builds": $manifest_builds
 }
 ENDJSON
@@ -196,11 +200,26 @@ ENDJSON
 
     r2_upload "$DIST_DIR/manifest-staging.json" "agent/manifest-staging.json" "application/json"
 
+    # Docker image build + push
+    echo "→ Building Docker image..."
+    cp "$DIST_DIR/obs-agent-linux-amd64" "$SCRIPT_DIR/obs-agent-linux-amd64"
+    docker build \
+        --build-arg VERSION="v${version}" \
+        -t "${DOCKER_IMAGE}:v${version}" \
+        -t "${DOCKER_IMAGE}:staging" \
+        "$SCRIPT_DIR"
+    rm -f "$SCRIPT_DIR/obs-agent-linux-amd64"
+
+    echo "→ Pushing Docker image to GHCR..."
+    docker push "${DOCKER_IMAGE}:v${version}"
+    docker push "${DOCKER_IMAGE}:staging"
+
     echo ""
     echo "═══════════════════════════════════════════════════════════"
     echo "  Staging complete! v${version}"
     echo "  Download: ${R2_PUBLIC_URL}/agent/staging/"
     echo "  Manifest: ${R2_PUBLIC_URL}/agent/manifest-staging.json"
+    echo "  Docker:   ${DOCKER_IMAGE}:v${version} / :staging"
     echo ""
     echo "  Test the staging binary, then promote:"
     echo "    ./release.sh ${version} --promote"
@@ -274,6 +293,7 @@ ENDJSON
   "version": "v${version}",
   "channel": "stable",
   "released_at": "$released_at",
+  "docker": "${DOCKER_IMAGE}:latest",
   "builds": $manifest_builds
 }
 ENDJSON
@@ -283,6 +303,12 @@ ENDJSON
     echo "$manifest" > "$tmpfile"
     r2_upload "$tmpfile" "agent/manifest.json" "application/json"
     rm -f "$tmpfile"
+
+    # Docker: tag as :latest and push
+    echo "→ Tagging Docker image as :latest..."
+    docker tag "${DOCKER_IMAGE}:v${version}" "${DOCKER_IMAGE}:latest"
+    echo "→ Pushing :latest to GHCR..."
+    docker push "${DOCKER_IMAGE}:latest"
 
     # Verify public URLs actually serve the right files
     echo "→ Verifying public downloads..."
@@ -306,6 +332,7 @@ ENDJSON
         echo "  CDN may take a few minutes to serve new files"
     fi
     echo "  Manifest:  ${R2_PUBLIC_URL}/agent/manifest.json"
+    echo "  Docker:    ${DOCKER_IMAGE}:latest"
     echo "═══════════════════════════════════════════════════════════"
 }
 
